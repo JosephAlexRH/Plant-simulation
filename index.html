@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
-        <title>Plant simulation</title>
+        <title>Evolving Plants</title>
         <style>
             body {
                 font: 12px Arial, sans-serif;
@@ -42,11 +42,16 @@
                 display: block;
                 color: #c9d1d8;
             }
+            .world-scroll {
+                position: relative;
+                overflow: auto; /* both ways: the valley is wider than the view and the sky taller */
+                aspect-ratio: 4 / 1;
+            }
             #c {
                 display: block;
-                width: 100%;
+                width: 150%; /* the valley is half as wide again as the view: scroll along it (the wheel zooms) */
                 height: auto;
-                aspect-ratio: 4 / 1;
+                aspect-ratio: 1188 / 264;
                 image-rendering: pixelated;
                 touch-action: none;
                 background: #c8d8e8;
@@ -874,7 +879,7 @@
                         <select id="exportPalette">
                             <option value="none">As drawn</option>
                             <option value="season">Season palette</option>
-                            <option value="seasonFrame" selected>Season palette + this frame</option>
+                            <option value="seasonFrame" selected>Season palette + this sky</option>
                         </select>
                     </label>
                     <label>Dither
@@ -902,9 +907,11 @@
         <main>
             <section class="simulation-view">
                 <div class="canvas-wrap">
-                    <canvas id="c"></canvas>
-                    <canvas id="lens" width="260" height="260" hidden></canvas>
-                    <div id="inspector" hidden></div>
+                    <div id="worldScroll" class="world-scroll">
+                        <canvas id="c"></canvas>
+                        <canvas id="lens" width="260" height="260" hidden></canvas>
+                        <div id="inspector" hidden></div>
+                    </div>
                 </div>
                 <p class="help">Hover to inspect · Click a plant to follow its species · Views: M moisture, L light, F fertility · Z magnifier</p>
             </section>
@@ -1102,11 +1109,22 @@
             "use strict";
 
             // Simulation settings and materials
-            const BASE_GRID_WIDTH = 528,
-                BASE_GRID_HEIGHT = 132,
-                GRID_WIDTH = 792,
-                GRID_HEIGHT = 198,
-                RESOLUTION_SCALE = GRID_WIDTH / BASE_GRID_WIDTH,
+            const BASE_GRID_WIDTH = 792, // (528 before the valley was widened by half)
+                BASE_GRID_HEIGHT = 176, // (132 before the sky was raised)
+                GRID_WIDTH = 1188,
+                // the sky was raised by a third so trees can grow taller: the ground, roots and rock are
+                // where they always were, measured from the bottom, and the old scene sits in the lower 198 rows
+                SCENE_HEIGHT = 198,
+                GRID_HEIGHT = 264,
+                SKY_EXTRA = GRID_HEIGHT - SCENE_HEIGHT,
+                // rows the ground (and the old scene with it) could be lifted to give a deeper soil belt;
+                // tried at 30 and judged not worth the extra soil to simulate
+                GROUND_LIFT = 0,
+                SCENE_TOP = SKY_EXTRA - GROUND_LIFT, // where the old scene's top row now falls
+                RESOLUTION_SCALE = 1.5,
+                // starting layouts (founders, bluebells, ant nests) were drawn up for the old 528-wide
+                // valley; they are stretched across the wider one
+                LAYOUT_STRETCH = BASE_GRID_WIDTH / 528,
                 CELL_COUNT = GRID_WIDTH * GRID_HEIGHT,
                 AIR = 0,
                 SOIL = 1,
@@ -1135,6 +1153,20 @@
                 DEAD: 3,
                 DECOMPOSED: 4,
                 REMOVED: 5,
+            });
+            // soil colour by fertility (fertility / 4 -> colour): poor -> ordinary -> rich
+            const SOIL_TONE_MID = 64;
+            const SOIL_TONES = Array.from({ length: 64 }, (_, k) => {
+                const f = k * 4;
+                const poor = [152, 118, 86], // a pale, washed-out brown
+                    mid = [126, 86, 48],
+                    rich = [66, 42, 26];
+                const mix = (a, b, t) => a.map((v, c) => Math.round(v + (b[c] - v) * t));
+                const ease = (lo, hi) => {
+                    const t = Math.min(1, Math.max(0, (f - lo) / (hi - lo)));
+                    return t * t * (3 - 2 * t);
+                };
+                return f < SOIL_TONE_MID ? mix(poor, mid, ease(28, SOIL_TONE_MID)) : mix(mid, rich, ease(SOIL_TONE_MID, 120));
             });
             const MATERIAL_COLOURS = [
                 [200, 216, 232, 4],
@@ -1355,7 +1387,7 @@
                     form: PlantForm.TREE,
                     productions: { X: "FF[+X]F[-X]F[++X][--X]X", F: "F" },
                     iterations: 4,
-                    stepLength: 3.6,
+                    stepLength: 5.2, // (taller since the sky was raised)
                     branchAngle: 30,
                     liftAngle: 64,
                     tropism: 0.04,
@@ -1381,7 +1413,7 @@
                     form: PlantForm.TREE,
                     productions: { X: "FF[+X]F[-X]X", F: "FF" },
                     iterations: 4,
-                    stepLength: 1.5,
+                    stepLength: 2.2, // (taller since the sky was raised)
                     branchAngle: 24,
                     liftAngle: 40,
                     tropism: 0.12,
@@ -1409,7 +1441,7 @@
                     form: PlantForm.TREE,
                     productions: { X: "F[+X]F[-X]F[+X]X", F: "F" },
                     iterations: 4,
-                    stepLength: 5.6,
+                    stepLength: 8, // (taller since the sky was raised)
                     branchAngle: 32,
                     liftAngle: 55,
                     tropism: 0.06,
@@ -1436,7 +1468,7 @@
                     form: PlantForm.TREE,
                     productions: { X: "FF[+X][-X]X", F: "F" },
                     iterations: 6,
-                    stepLength: 5,
+                    stepLength: 7.1, // (taller since the sky was raised)
                     branchAngle: 30,
                     liftAngle: 68,
                     tropism: 0.1,
@@ -1611,6 +1643,116 @@
                     leafOut: 0.0,
                 },
                 {
+                    // ash: tall and open, a long straight trunk and branches that sweep up at the tips;
+                    // the last to leaf out and among the first to drop (yellow)
+                    name: "ash",
+                    form: PlantForm.TREE,
+                    productions: { X: "FF[+X]F[-X]FX", F: "F" },
+                    iterations: 4,
+                    stepLength: 6, // (taller since the sky was raised)
+                    branchAngle: 24,
+                    liftAngle: 70,
+                    tropism: -0.07, // branch tips turn upward
+                    trunkThickness: 1.7,
+                    leafRadiusX: 1.3,
+                    leafRadiusY: 1.1,
+                    leafDensity: 0.62, // light, airy crown
+                    shadeTolerance: 0.25,
+                    rootDepth: 14,
+                    dispersal: 8, // winged keys
+                    lifespan: 9000,
+                    growthRate: 1.15,
+                    deciduous: 0.9,
+                    autumnHue: 0.08,
+                    flowering: 0.2,
+                    barkPale: 0.38,
+                    leafOut: 0.1,
+                    hue: 124,
+                },
+                {
+                    // hazel: a many-stemmed coppice clump, yellow catkins in February (wind-pollinated)
+                    name: "hazel",
+                    form: PlantForm.TREE,
+                    productions: { X: "F[+X]FX", F: "FF" },
+                    iterations: 3,
+                    basalStems: 4,
+                    stepLength: 1.6,
+                    branchAngle: 18,
+                    liftAngle: 68,
+                    tropism: -0.02,
+                    trunkThickness: 0.8,
+                    leafRadiusX: 2,
+                    leafRadiusY: 1.5,
+                    leafDensity: 0.85,
+                    shadeTolerance: 0.7,
+                    rootDepth: 9,
+                    lifespan: 6000,
+                    growthRate: 1.2,
+                    deciduous: 0.85,
+                    autumnHue: 0.05,
+                    flowering: 0.3,
+                    barkPale: 0.2,
+                    leafOut: 0.02,
+                    hue: 116,
+                },
+                {
+                    // rowan: slender and upright, white flower heads in May, scarlet berries in autumn
+                    name: "rowan",
+                    form: PlantForm.TREE,
+                    productions: { X: "F[+X]F[-X]X", F: "F" },
+                    iterations: 4,
+                    stepLength: 2.2,
+                    branchAngle: 22,
+                    liftAngle: 76,
+                    tropism: -0.03,
+                    trunkThickness: 1.1,
+                    leafRadiusX: 1.4,
+                    leafRadiusY: 1.3,
+                    leafDensity: 0.78,
+                    shadeTolerance: 0.4,
+                    rootDepth: 10,
+                    dispersal: 7, // birds
+                    seedCount: 2,
+                    lifespan: 5500,
+                    deciduous: 0.88,
+                    autumnHue: 0.75,
+                    flowering: 0.8,
+                    petalHue: 0.06,
+                    bloomTime: 0.21,
+                    berries: 0.85,
+                    barkPale: 0.4,
+                    leafOut: 0.03,
+                    hue: 120,
+                },
+                {
+                    // wild cherry: tall, with branches in level tiers, white blossom in April, red autumn,
+                    // glossy red-brown bark
+                    name: "wild cherry",
+                    form: PlantForm.TREE,
+                    productions: { X: "F[++X][--X]FF[+X][-X]X", F: "F" },
+                    iterations: 4,
+                    stepLength: 4.2, // (taller since the sky was raised)
+                    branchAngle: 42,
+                    liftAngle: 38, // spreading, almost level tiers
+                    tropism: 0.03,
+                    trunkThickness: 1.6,
+                    leafRadiusX: 1.7,
+                    leafRadiusY: 1.2,
+                    leafDensity: 0.85,
+                    shadeTolerance: 0.3,
+                    rootDepth: 12,
+                    dispersal: 6,
+                    lifespan: 7000,
+                    deciduous: 0.9,
+                    autumnHue: 0.92,
+                    flowering: 0.85,
+                    petalHue: 0.01,
+                    bloomTime: 0.1, // April
+                    barkHue: 6,
+                    leafOut: 0.04,
+                    hue: 126,
+                },
+                {
                     name: "foxglove",
                     form: PlantForm.TREE,
                     productions: { X: "F[+X]F[-X]FX", F: "F" },
@@ -1749,7 +1891,9 @@
             const DISPLACEABLE = new Set([SEED, LITTER, FUNGUS, MUSHROOM, GRASS]);
             const MAX_PLANT_COMMANDS = 4000;
             const LITTER_ROT_BASE = 0.001;
-            const HUMUS_FRACTION = 0.2;
+            const SOIL_SETTLING = 0.00002; // per tick, for a surface cell of soil heaped above the original ground
+            const HUMUS_FRACTION = 0.04; // share of rotting litter left behind as a cell of soil (the rest feeds the soil's fertility)
+            const DEAD_WOOD_TO_LITTER = 0.35; // share of a dead tree's wood that crumbles to litter (the rest rots away)
             const LITTER_FERTILITY = 24;
             const INITIAL_SOIL_FERTILITY = 64;
             const SOIL_DRYING_INTERVAL = 3;
@@ -1830,7 +1974,7 @@
             const scaleDistance = (value) => value * RESOLUTION_SCALE;
             const scaleCells = (value) => Math.max(1, Math.round(scaleDistance(value)));
             const scaleArea = (value) => Math.max(1, Math.round(value * RESOLUTION_SCALE ** 2));
-            if (GRID_HEIGHT / BASE_GRID_HEIGHT !== RESOLUTION_SCALE)
+            if (GRID_HEIGHT / BASE_GRID_HEIGHT !== RESOLUTION_SCALE || GRID_WIDTH / BASE_GRID_WIDTH !== RESOLUTION_SCALE)
                 throw new Error("Grid dimensions must use one uniform resolution scale.");
 
             const WATER_PER_WOOD = 0.4 / RESOLUTION_SCALE ** 2;
@@ -1844,6 +1988,8 @@
             const ROOT_MAX_ORDER = 3; // main root -> side roots -> fine roots
             const GRAVEL_THICKNESS = 4; // average gravel band, base cells
             const GRAVEL_MAX_MOISTURE = 110; // gravel drains: it never holds more than this
+            const ROCK_FISSURE_SPACING = 26; // base cells between cracks in the rock, on average
+            const ROOT_POCKET_TIPS = 14; // extra roots a plant may send branching through water pockets it finds
             const AQUIFER_FRACTION = 0.11; // share of the deep rock that is water-bearing
             const AQUIFER_CAPACITY = 235;
             const AQUIFER_RECHARGE = 1; // moisture an aquifer cell regains per moisture update
@@ -2014,7 +2160,7 @@
                 // Snow lags the temperature by a few weeks: it builds through late autumn into winter
                 // and lingers into spring; in high summer only the tallest peaks keep a little.
                 const warmth = seasonState(tick - YEAR_LENGTH * 0.05).temperature;
-                return Math.round(GRID_HEIGHT * (0.12 * Math.pow(1 - warmth, 1.3) - 0.045 * warmth * warmth) * 4);
+                return Math.round(SCENE_HEIGHT * (0.12 * Math.pow(1 - warmth, 1.3) - 0.045 * warmth * warmth) * 4);
             }
             // Decorative sky objects, regenerated with the backdrop. Visual only.
             const swayColumn = new Float32Array(GRID_WIDTH), // per-column bend for this frame
@@ -2371,6 +2517,283 @@
                 return { phase, illumination: (1 - Math.cos(2 * Math.PI * phase)) / 2, date };
             }
             const moonMask = new Uint8Array(CELL_COUNT); // pixels the moon covers this frame (stars skip them)
+            // ---------------------------------------------------------------------------------
+            // Clouds: drawn only, they never touch the simulation. Soft and see-through, but worked out
+            // cell by cell like the sky behind them (one colour per cell, carrying the sky's grain), so
+            // they belong to the same picture rather than sitting on top of it.
+            //   shape    - domain-warped noise: a density field whose sampling is itself pushed around by
+            //              noise, so blobs tear and curl into cloud forms; stretched along the wind
+            //   motion   - the field drifts with the simulation's wind (the high layer faster), and two
+            //              parts of it slide past each other so the clouds keep boiling and changing
+            //   cover    - how much of the field shows follows the weather: afternoon cumulus on fair
+            //              days, thickening ahead of rain, a near-solid grey deck in rain
+            //   light    - each cell looks toward the sun through the field: the more cloud in the way,
+            //              the deeper in shade it is, so they have sunlit sides and shaded undersides
+            //              with no drawn edge at all
+            // The field is worked out on a coarse lattice and smoothly blended to every cell.
+            // ---------------------------------------------------------------------------------
+            const CLOUD_LATTICE = 4; // cells between field samples
+            const CLOUD_DRIFT = 0.5; // cells per tick per unit of wind, low layer
+            const cloudAlpha = new Float32Array(CELL_COUNT), // how much cloud covers each cell (0..1)
+                cloudLit = new Float32Array(CELL_COUNT); // how sunlit that cloud is (0..1)
+            let cloudRows = 0, // the band of rows clouds can reach, from the top
+                cloudDrift = 0,
+                cloudCover = 0.3,
+                cloudsReady = false,
+                cloudSeed = 1,
+                cloudFieldW = 0,
+                cloudFieldH = 0,
+                cloudField = null,
+                cloudEdge = null, // density above the threshold, unclamped: where the edges fall
+                cloudCirrus = null;
+            function cloudFbm(x, y, seed, octaves) {
+                let sum = 0, amplitude = 0.5, total = 0;
+                for (let o = 0; o < octaves; o++) {
+                    sum += cloudValueNoise(x, y, seed + o * 101) * amplitude;
+                    total += amplitude;
+                    x *= 2.03;
+                    y *= 2.03;
+                    amplitude *= 0.5;
+                }
+                return sum / total;
+            }
+            function cloudCoverTarget() {
+                // how much of the sky the weather wants clouded
+                const season = seasonState();
+                const sky = skyState();
+                if (weather.rain) return 0.82 + 0.1 * Math.min(1, Math.abs(wind.velocity) * 2);
+                const buildingUp = clamp(1 - weather.left / 1400, 0, 1); // rain on the way
+                // fair-weather cumulus grow through the day and melt away toward dusk
+                const afternoon = sky.isDay ? Math.sin(Math.PI * sky.sunX) : 0;
+                const fair = 0.1 + (0.12 + 0.12 * season.summer + 0.06 * season.spring + 0.1 * season.autumn + 0.14 * season.winter) * (0.4 + 0.6 * afternoon);
+                return fair + 0.45 * buildingUp;
+            }
+            function updateClouds() {
+                if (!cloudsReady) {
+                    cloudsReady = true;
+                    cloudFieldTick = -1e9;
+                    cloudHorizon = -1;
+                    cloudSeed = (worldSeed ^ 0x1c0d5) & 0xffffff;
+                    cloudDrift = (worldSeed % 997) * 7;
+                    cloudCover = cloudCoverTarget();
+                }
+                cloudDrift += wind.velocity * CLOUD_DRIFT;
+                if (simulationTick % 10 === 0) cloudCover += (cloudCoverTarget() - cloudCover) * 0.012;
+            }
+            function computeCloudField() {
+                // The density field on a coarse lattice laid out in the clouds' own drifting frame, so
+                // between updates (every few ticks) the picture just slides with the wind. Low/mid layer
+                // and the faster high wisps each have their own frame.
+                if (cloudHorizon < 0) {
+                    // where the mountains meet the sky, on average: the clouds live above it, so they
+                    // read as nearer than the ranges instead of hiding behind them
+                    let sum = 0;
+                    for (let x = 0; x < GRID_WIDTH; x++) {
+                        let y = 0;
+                        while (y < GRID_HEIGHT - 1 && backdropSky[y * GRID_WIDTH + x]) y++;
+                        sum += y;
+                    }
+                    cloudHorizon = sum / GRID_WIDTH;
+                }
+                // the main layer's base: just above the ridges (bellies brushing the peaks), a little
+                // lower when the sky is heavy with rain
+                const base = cloudHorizon - scaleDistance(10) + cloudCover * scaleDistance(10),
+                    crown = scaleDistance(4);
+                cloudRows = Math.max(1, Math.min(GRID_HEIGHT, Math.round(base + scaleDistance(14))));
+                const L = CLOUD_LATTICE,
+                    margin = 8; // lattice points spare on each side, for the drift until the next update
+                const W = Math.ceil(GRID_WIDTH / L) + 2 * margin + 2,
+                    H = Math.ceil(cloudRows / L) + 2;
+                if (W !== cloudFieldW || H !== cloudFieldH) {
+                    cloudFieldW = W;
+                    cloudFieldH = H;
+                    cloudField = new Float32Array(W * H);
+                    cloudEdge = new Float32Array(W * H);
+                    cloudCirrus = new Float32Array(W * H);
+                    cloudShade = new Float32Array(W * H);
+                }
+                cloudFieldU0 = (Math.floor(-cloudDrift / L) - margin) * L;
+                cloudCirrusU0 = (Math.floor(-cloudDrift * 1.8 / L) - margin) * L;
+                const t = simulationTick;
+                const lean = clamp(wind.velocity, -1, 1);
+                const storminess = clamp(Math.abs(wind.velocity) * 1.5, 0, 1);
+                // the band the main layer sits in: a soft top, a flatter base
+                const threshold = 0.62 - cloudCover * 0.42; // cover sets how much of the field clears it
+                for (let ly = 0; ly < H; ly++) {
+                    const y = ly * L;
+                    const height = (base - y) / (base - crown); // 0 at the base, 1 at the top of the band
+                    const profile = height < 0 ? Math.max(0, 1 + height * 6) : height > 1 ? Math.max(0, 1 - (height - 1) * 3) : 1 - 0.35 * height * height;
+                    const highness = clamp(1 - y / (base * 0.4), 0, 1);
+                    for (let lx = 0; lx < W; lx++) {
+                        const k = ly * W + lx;
+                        // tops are pushed downwind a little more than bases
+                        const u = cloudFieldU0 + lx * L - lean * (base - y) * 0.35,
+                            v = y;
+                        if (profile > 0) {
+                            // warp: sample the main noise at a position nudged by other noise
+                            const wx = (cloudFbm(u / 160, v / 70 + t / 9000, cloudSeed + 11, 2) - 0.5) * (70 + 60 * storminess),
+                                wy = (cloudFbm(u / 160 + 31, v / 70 - t / 9000, cloudSeed + 23, 2) - 0.5) * 28;
+                            // two copies of the field sliding past each other keep it boiling
+                            const a = cloudFbm((u + wx) / 95, (v + wy) / 34, cloudSeed, 4);
+                            const b = cloudFbm((u + wx + t * 0.02) / 60, (v + wy) / 26 + 7, cloudSeed + 57, 3);
+                            const d = (a * 0.7 + b * 0.3) * profile;
+                            cloudField[k] = clamp((d - threshold) / 0.16, 0, 1);
+                            cloudEdge[k] = d - threshold;
+                        } else {
+                            cloudField[k] = 0;
+                            cloudEdge[k] = -1;
+                        }
+                        // high wisps: long streaks drifting faster, only toward the top of the sky
+                        if (highness > 0) {
+                            const hu = cloudCirrusU0 + lx * L;
+                            const hw = (cloudFbm(hu / 220, v / 30, cloudSeed + 91, 2) - 0.5) * 40;
+                            const c = cloudFbm((hu + hw) / 260, (v + hw * 0.2) / 9, cloudSeed + 131, 4);
+                            cloudCirrus[k] = clamp((c - 0.58 + 0.1 * cloudCover) / 0.2, 0, 1) * highness * (1 - 0.7 * cloudCover);
+                        } else cloudCirrus[k] = 0;
+                    }
+                }
+            }
+            function shadeCloudField(sky) {
+                // per lattice point: how much cloud lies between it and the light. The light comes from
+                // the sun's side and above, or straight down when the sun is high (at night, the moon's)
+                const W = cloudFieldW;
+                const sunX = sky.isDay ? sky.sunX : sky.nightProgress >= 0 ? sky.nightProgress : 0.5;
+                const side = (0.5 - sunX) * 2; // +1: light from the left
+                const elevation = sky.isDay ? clamp(sky.sunAltitude, 0, 1) : 0.4;
+                const stepX = -side * (1 - elevation) * 1.6,
+                    stepY = -(0.4 + elevation * 1.2);
+                for (let ly = 0; ly < cloudFieldH; ly++)
+                    for (let lx = 0; lx < W; lx++) {
+                        let sum = 0;
+                        for (let k = 1; k <= 4; k++) {
+                            const sx = Math.round(lx + stepX * k),
+                                sy = Math.round(ly + stepY * k);
+                            if (sx < 0 || sx >= W || sy < 0 || sy >= cloudFieldH) continue;
+                            sum += cloudField[sy * W + sx] * (1.2 - k * 0.2);
+                        }
+                        cloudShade[ly * W + lx] = 0.85 * clamp(sum / 3, 0, 1);
+                    }
+            }
+            let cloudHorizon = -1,
+                cloudFieldTick = -1e9,
+                cloudRasterTick = -1,
+                cloudRasterDrift = NaN,
+                cloudFieldU0 = 0,
+                cloudCirrusU0 = 0,
+                cloudShade = null;
+            const CLOUD_DETAIL_W = 192,
+                CLOUD_DETAIL_H = 96;
+            let cloudDetail = null,
+                cloudColumnIndex = null,
+                cloudColumnFraction = null,
+                cloudRowEdge = null,
+                cloudRowShade = null,
+                cloudRowWisp = null;
+            const CLOUD_FIELD_EVERY = 6; // ticks between fresh fields; in between the field just slides
+            function rasterizeClouds(sky) {
+                // nothing has moved (paused, or drawn twice in a tick): keep last frame's clouds
+                if (simulationTick === cloudRasterTick && cloudDrift === cloudRasterDrift && cloudField) return;
+                if (simulationTick - cloudFieldTick >= CLOUD_FIELD_EVERY || simulationTick < cloudFieldTick || !cloudField) {
+                    computeCloudField();
+                    shadeCloudField(sky);
+                    cloudFieldTick = simulationTick;
+                }
+                cloudRasterTick = simulationTick;
+                cloudRasterDrift = cloudDrift;
+                const L = CLOUD_LATTICE,
+                    W = cloudFieldW;
+                cloudAlpha.fill(0, 0, cloudRows * GRID_WIDTH);
+                // where world column x falls in each layer's drifting lattice
+                const detailShift = Math.round(cloudDrift);
+                if (!cloudDetail) {
+                    // a small tile of fine noise for the cloud edges, made once
+                    cloudDetail = new Float32Array(CLOUD_DETAIL_W * CLOUD_DETAIL_H);
+                    for (let y = 0; y < CLOUD_DETAIL_H; y++)
+                        for (let x = 0; x < CLOUD_DETAIL_W; x++) {
+                            // wrapped at the tile's edges so the repeat doesn't show a seam
+                            const wx = x / CLOUD_DETAIL_W, wy = y / CLOUD_DETAIL_H;
+                            const n = (u, v) => cloudFbm(u / 6, v / 3.5, 211, 2);
+                            cloudDetail[y * CLOUD_DETAIL_W + x] =
+                                (n(x, y) * (1 - wx) * (1 - wy) + n(x - CLOUD_DETAIL_W, y) * wx * (1 - wy) + n(x, y - CLOUD_DETAIL_H) * (1 - wx) * wy + n(x - CLOUD_DETAIL_W, y - CLOUD_DETAIL_H) * wx * wy) - 0.5;
+                        }
+                }
+                const mainShift = (-cloudDrift - cloudFieldU0) / L,
+                    highShift = (-cloudDrift * 1.8 - cloudCirrusU0) / L;
+                // where each column falls in the two drifting lattices (the same for every row)
+                if (!cloudColumnIndex || cloudColumnIndex.length !== GRID_WIDTH * 2) {
+                    cloudColumnIndex = new Int32Array(GRID_WIDTH * 2);
+                    cloudColumnFraction = new Float32Array(GRID_WIDTH * 2);
+                    cloudRowEdge = new Float32Array(W);
+                    cloudRowShade = new Float32Array(W);
+                    cloudRowWisp = new Float32Array(W);
+                }
+                if (cloudRowEdge.length < W) {
+                    cloudRowEdge = new Float32Array(W);
+                    cloudRowShade = new Float32Array(W);
+                    cloudRowWisp = new Float32Array(W);
+                }
+                for (let x = 0; x < GRID_WIDTH; x++) {
+                    const fm = x / L + mainShift,
+                        fh = x / L + highShift;
+                    cloudColumnIndex[x] = Math.floor(fm);
+                    cloudColumnFraction[x] = fm - Math.floor(fm);
+                    cloudColumnIndex[GRID_WIDTH + x] = Math.floor(fh);
+                    cloudColumnFraction[GRID_WIDTH + x] = fh - Math.floor(fh);
+                }
+                const wispRows = cloudRows;
+                for (let y = 0; y < cloudRows; y++) {
+                    // blend this row from the two lattice rows around it, once, then each cell only
+                    // needs a blend along the row
+                    const ly = Math.floor(y / L),
+                        ty = y / L - ly,
+                        uy = 1 - ty;
+                    if (ly + 1 >= cloudFieldH) break;
+                    let anyEdge = false,
+                        anyWisp = false;
+                    for (let lx = 0, k = ly * W; lx < W; lx++, k++) {
+                        const e = cloudEdge[k] * uy + cloudEdge[k + W] * ty;
+                        cloudRowEdge[lx] = e;
+                        if (e > -0.09) anyEdge = true;
+                    }
+                    if (y < wispRows)
+                        for (let lx = 0, k = ly * W; lx < W; lx++, k++) {
+                            const c = cloudCirrus[k] * uy + cloudCirrus[k + W] * ty;
+                            cloudRowWisp[lx] = c;
+                            if (c > 0.04) anyWisp = true;
+                        }
+                    if (!anyEdge && !anyWisp) continue;
+                    if (anyEdge) for (let lx = 0, k = ly * W; lx < W; lx++, k++) cloudRowShade[lx] = cloudShade[k] * uy + cloudShade[k + W] * ty;
+                    const detailRow = (y % CLOUD_DETAIL_H) * CLOUD_DETAIL_W;
+                    const row = y * GRID_WIDTH;
+                    for (let x = 0; x < GRID_WIDTH; x++) {
+                        const lm = cloudColumnIndex[x],
+                            tm = cloudColumnFraction[x];
+                        let edge = anyEdge ? cloudRowEdge[lm] + (cloudRowEdge[lm + 1] - cloudRowEdge[lm]) * tm : -1;
+                        let wisp = 0;
+                        if (anyWisp) {
+                            const lh = cloudColumnIndex[GRID_WIDTH + x];
+                            wisp = cloudRowWisp[lh] + (cloudRowWisp[lh + 1] - cloudRowWisp[lh]) * cloudColumnFraction[GRID_WIDTH + x];
+                        }
+                        if (edge < -0.04 && wisp < 0.04) continue;
+                        const i = row + x;
+                        if (!backdropSky[i]) continue; // clouds sit behind the hills
+                        // near an edge, fine noise at the scale of a few cells breaks it into soft
+                        // tufts and wisps (the lattice alone would give a smooth airbrushed rim)
+                        if (edge < 0.12 && edge > -0.04) {
+                            const dx = (((x - detailShift) % CLOUD_DETAIL_W) + CLOUD_DETAIL_W) % CLOUD_DETAIL_W;
+                            edge += cloudDetail[detailRow + dx] * 0.13 * Math.min(1, (edge + 0.04) / 0.05);
+                        }
+                        const dense = edge <= 0 ? 0 : edge >= 0.09 ? 1 : edge / 0.09;
+                        let alpha = dense * dense * (3 - 2 * dense);
+                        if (wisp * 0.5 > alpha) alpha = wisp * 0.5;
+                        if (alpha < 0.02) continue;
+                        // the same fine grain as the sky, so the soft edges aren't smooth airbrush
+                        alpha += (hashByte(i * 7 + 3) / 255 - 0.5) * 0.1 * (1 - alpha);
+                        cloudAlpha[i] = alpha > 1 ? 1 : alpha;
+                        cloudLit[i] = anyEdge ? 1 - (cloudRowShade[lm] + (cloudRowShade[lm + 1] - cloudRowShade[lm]) * tm) : 1;
+                    }
+                }
+            }
             let moonMaskCells = [];
             function drawMoon(data, sky, nightness) {
                 for (const i of moonMaskCells) moonMask[i] = 0;
@@ -2381,7 +2804,7 @@
                 if (visibility <= 0.01) return;
                 const radius = scaleCells(4.2);
                 const cx = Math.round(GRID_WIDTH * (0.08 + 0.84 * sky.nightProgress));
-                const cy = Math.round(GRID_HEIGHT * 0.5 - sky.moonHeight * GRID_HEIGHT * 0.38);
+                const cy = Math.round(SCENE_TOP + SCENE_HEIGHT * 0.5 - sky.moonHeight * (SCENE_HEIGHT * 0.38 + SCENE_TOP * 0.8));
                 const k = Math.cos(2 * Math.PI * moon.phase);
                 const waxing = moon.phase < 0.5;
                 for (let dy = -Math.ceil(radius); dy <= Math.ceil(radius); dy++)
@@ -2393,7 +2816,7 @@
                             y = cy + dy;
                         if (!isInsideGrid(x, y)) continue;
                         const i = getCellIndex(x, y);
-                        if (!backdropSky[i] || materialGrid[i] !== AIR) continue; // behind hills and plants
+                        if (!backdropSky[i] || materialGrid[i] !== AIR || (i < cloudRows * GRID_WIDTH && cloudAlpha[i] > 0.55)) continue; // behind hills, plants and thick cloud
                         // terminator: the lit part is right of it while waxing, left while waning
                         // (as seen from the northern hemisphere)
                         moonMask[i] = 1;
@@ -2639,6 +3062,10 @@
             function distinctiveBaseName(shape, g) {
                 const deciduous = (g.deciduous ?? 0) > 0.5;
                 if (!deciduous && (g.berries ?? 0) > 0.5) return "Holly";
+                if (deciduous && (g.berries ?? 0) > 0.5) return "Rowan";
+                if (deciduous && (g.basalStems ?? 1) >= 3.5 && (g.flowering ?? 0) < 0.5) return "Hazel";
+                if (deciduous && (g.tropism ?? 0) < -0.05 && (g.leafDensity ?? 0.83) < 0.72 && (g.barkPale ?? 0) < 0.6) return "Ash";
+                if (deciduous && (g.flowering ?? 0) > 0.5 && (g.bloomTime ?? 0.12) < 0.14 && (g.petalHue ?? 0.3) < 0.15 && (g.liftAngle ?? 55) < 46 && !isShrubGenome(g)) return "Wild Cherry";
                 if ((g.flowering ?? 0) > 0.5 && (g.basalStems ?? 1) < 1.5 && (g.branchAngle ?? 30) < 16 && (g.petalHue ?? 0.3) >= 0.6) return "Foxglove"; // one tall purple spike
                 if (deciduous && (g.flowering ?? 0) > 0.5 && (g.tropism ?? 0) > 0.12 && (g.branchAngle ?? 30) > 48 && (g.petalHue ?? 0.3) < 0.2) return "Bramble"; // low arching tangles
                 return null;
@@ -2702,7 +3129,7 @@
                 if (special) {
                     // plants with a shape all their own keep their name whatever their size
                     base = special;
-                    modifier = special === "Holly" ? colourModifier(g) : "";
+                    modifier = special === "Holly" || special === "Ash" || special === "Hazel" ? colourModifier(g) : "";
                 } else if (!isShrub) {
                     base = treeBaseName(shape, g);
                     modifier =
@@ -3520,9 +3947,10 @@
                         n++;
                     }
                 };
-                tries("wood", 1, scaleCells(172)); // by the oak
-                tries("wood", 1, scaleCells(356)); // by the pine
-                tries("garden", 3);
+                tries("wood", 1, scaleCells(172 * LAYOUT_STRETCH)); // by the oak
+                tries("wood", 1, scaleCells(356 * LAYOUT_STRETCH)); // by the pine
+                tries("wood", 1, scaleCells(470 * LAYOUT_STRETCH));
+                tries("garden", 4);
                 antFounderAverages = antAverages();
             }
             function antAverages() {
@@ -3683,7 +4111,7 @@
                 colony.tunnels.push(j);
                 // the spoil: fine earth piled up beside the hole
                 const side = colony.x + (rng() < 0.5 ? -1 : 1) * (1 + Math.floor(rng() * 2));
-                if (side >= 0 && side < GRID_WIDTH && isAir(side, antGround[side] - 1) && rng() < 0.5) {
+                if (side >= 0 && side < GRID_WIDTH && isAir(side, antGround[side] - 1) && antGround[side] >= antGround[colony.x] - 1 && rng() < 0.15) {
                     setCell(side, antGround[side] - 1, SOIL);
                     antGround[side]--;
                 }
@@ -4606,7 +5034,7 @@
                 }
                 for (let x = 0; x < GRID_WIDTH; x++)
                     a[x] = Math.round(
-                        GRID_HEIGHT - scaleDistance(35) + (a[x] / total) * scaleDistance(25),
+                        GRID_HEIGHT - GROUND_LIFT - scaleDistance(35) + (a[x] / total) * scaleDistance(25),
                     );
                 return a;
             }
@@ -4615,6 +5043,204 @@
             // Gravel is easy for roots but drains (holds little water). Aquifers stay wet and refill slowly,
             // so they are a reliable supply that only deep-rooted plants can reach.
             // ---------------------------------------------------------------------------------
+            // ---------------------------------------------------------------------------------
+            // The bedrock, drawn as real Kent geology (drawing only: the rock behaves as before).
+            //   chalk  - the North Downs: pale bands with rows of dark flint nodules, the odd fossil
+            //            sea urchin
+            //   Weald  - sandstone and clay in warm buff and grey bands, thin rusty ironstone seams,
+            //            the odd fossil bone
+            // Layers dip gently across the valley and wander a little, like a road cutting.
+            // Water pockets are drawn by how full they are: the water settles to the bottom of each
+            // pocket and the gravel above it shows dry, so they brim after a wet winter and shrink
+            // through a dry summer (and under thirsty roots).
+            // ---------------------------------------------------------------------------------
+            const ROCK_TONES = [
+                // chalk
+                { colour: [204, 200, 186], name: "Chalk" },
+                { colour: [192, 188, 175], name: "Chalk" },
+                { colour: [214, 210, 197], name: "Chalk" },
+                { colour: [170, 166, 152], name: "Marly chalk" },
+                { colour: [50, 50, 58], name: "Flint", note: "a nodule of flint in the chalk" },
+                { colour: [84, 82, 88], name: "Flint", note: "a nodule of flint in the chalk" },
+                { colour: [226, 220, 198], name: "Fossil sea urchin", note: "a fossil echinoid, about 85 million years old" },
+                // Weald
+                { colour: [160, 140, 106], name: "Sandstone" },
+                { colour: [144, 124, 94], name: "Sandstone" },
+                { colour: [118, 120, 118], name: "Weald clay" },
+                { colour: [102, 104, 106], name: "Weald clay" },
+                { colour: [138, 88, 56], name: "Ironstone", note: "a thin seam of ironstone" },
+                { colour: [140, 132, 114], name: "Siltstone" },
+                { colour: [214, 198, 166], name: "Fossil bone", note: "a fragment of fossil bone; the Weald is where Iguanodon was found" },
+                // the weathered top of the rock, and the broken layer between it and the soil
+                { colour: [210, 206, 193], name: "Fractured chalk", note: "the weathered top of the chalk, broken into blocks" }, // 14
+                { colour: [150, 145, 132], name: "Fractured chalk", note: "the weathered top of the chalk, broken into blocks" }, // 15
+                { colour: [216, 212, 198], name: "Chalk rubble", note: "frost-shattered chalk in a clay matrix, between the soil and the rock" }, // 16
+                { colour: [186, 182, 168], name: "Chalk rubble", note: "frost-shattered chalk in a clay matrix, between the soil and the rock" }, // 17
+                { colour: [130, 112, 88], name: "Chalk rubble", note: "frost-shattered chalk in a clay matrix, between the soil and the rock" }, // 18
+                { colour: [168, 118, 72], name: "Subsoil", note: "weathered clay and sand, mottled orange and grey, above the rock" }, // 19
+                { colour: [140, 134, 120], name: "Subsoil", note: "weathered clay and sand, mottled orange and grey, above the rock" }, // 20
+                { colour: [112, 104, 94], name: "Subsoil", note: "a stone in the subsoil" }, // 21
+                { colour: [150, 128, 96], name: "Weathered sandstone", note: "the soft, broken top of the rock" }, // 22
+                { colour: [88, 84, 78], name: "Fissure", note: "a crack in the rock, choked with grit; roots can follow it down" }, // 23
+                // compacted subsoil: dense, stony earth between the topsoil and the bedrock
+                { colour: [104, 78, 54], name: "Compacted subsoil", note: "dense, stony earth below the topsoil; hard going for roots" }, // 24
+                { colour: [94, 71, 50], name: "Compacted subsoil", note: "dense, stony earth below the topsoil; hard going for roots" }, // 25
+                { colour: [86, 68, 52], name: "Compacted subsoil", note: "dense clay over the rock; roots work into it only slowly" }, // 26
+                { colour: [138, 118, 94], name: "Stone", note: "a stone in the subsoil" }, // 27
+                { colour: [178, 172, 156], name: "Chalk fragment", note: "a lump of chalk worked up into the subsoil" }, // 28
+            ];
+            const rockTone = new Uint8Array(CELL_COUNT),
+                subsoilBlend = new Uint8Array(CELL_COUNT); // how far the topsoil has darkened toward the subsoil
+            let rockTonesFor = null; // the world the rock tones were worked out for
+            let worldGeology = "chalk";
+            function buildRockTones() {
+                const seed = worldSeed >>> 0;
+                rockTonesFor = seed;
+                worldGeology = Math.imul(seed ^ 0x6c8e9cf5, 2654435761) >>> 31 ? "weald" : "chalk";
+                const rockRng = mulberry32((seed ^ 0x3a17) >>> 0);
+                const dip = (rockRng() - 0.5) * 0.08; // rows per column the layers tilt
+                const wander = layNoise(rockRng, 140, 2);
+                const noiseSeed = (seed & 0xffff) + 401;
+                const chalk = worldGeology === "chalk";
+                // where the solid rock starts in each column: its top is weathered and broken, and the
+                // bedding only shows lower down
+                const rockTop = new Int32Array(GRID_WIDTH).fill(GRID_HEIGHT);
+                for (let x = 0; x < GRID_WIDTH; x++)
+                    for (let y = 0; y < GRID_HEIGHT; y++)
+                        if (materialGrid[y * GRID_WIDTH + x] === STONE) {
+                            rockTop[x] = y;
+                            break;
+                        }
+                const weathered = scaleDistance(7); // rows of broken rock under the rubble
+                // the bottom of the topsoil darkens into the subsoil, so the change isn't a hard line
+                // (the soil's bottom edge is ragged, so it is smoothed along the valley first: without
+                // that the darkening came out in vertical streaks)
+                const soilBottom = new Float32Array(GRID_WIDTH);
+                for (let x = 0; x < GRID_WIDTH; x++) {
+                    let bottom = GRID_HEIGHT;
+                    for (let y = 1; y < GRID_HEIGHT; y++) {
+                        const m = materialGrid[y * GRID_WIDTH + x],
+                            n = materialGrid[(y - 1) * GRID_WIDTH + x];
+                        const hard = (v) => v === GRAVEL || v === STONE || v === AQUIFER;
+                        if (hard(m) && hard(n)) {
+                            bottom = y - 1;
+                            break;
+                        }
+                    }
+                    soilBottom[x] = bottom;
+                }
+                const smoothBottom = new Float32Array(GRID_WIDTH);
+                for (let x = 0; x < GRID_WIDTH; x++) {
+                    let sum = 0, n = 0;
+                    for (let d = -6; d <= 6; d++) if (x + d >= 0 && x + d < GRID_WIDTH && soilBottom[x + d] < GRID_HEIGHT) (sum += soilBottom[x + d]), n++;
+                    const bottom = n ? sum / n : GRID_HEIGHT;
+                    smoothBottom[x] = bottom;
+                    for (let y = 0; y < GRID_HEIGHT; y++) subsoilBlend[y * GRID_WIDTH + x] = Math.round(clamp(1 - (bottom - y) / scaleDistance(6), 0, 1) * 210);
+                }
+                // the layers are laid out from that smoothed line, not from the cells' own ragged
+                // materials, so they run as smooth bands across the valley
+                for (let y = 0; y < GRID_HEIGHT; y++)
+                    for (let x = 0; x < GRID_WIDTH; x++) {
+                        const i = y * GRID_WIDTH + x;
+                        const m = materialGrid[i];
+                        if (m !== GRAVEL && m !== STONE && m !== AQUIFER) continue;
+                        const below = y - smoothBottom[x]; // rows below the bottom of the topsoil
+                        const compact = scaleDistance(9) + cloudValueNoise(x / 9, 1.7, seed & 0xffff) * scaleDistance(5); // dense earth over the rock
+                        const fine = hashByte(i * 31 + noiseSeed) / 255;
+                        if (m === GRAVEL && below > compact) {
+                            rockTone[i] = 23; // a fissure down through the rock
+                            continue;
+                        }
+                        if (below < compact) {
+                            // compacted subsoil: dense dark earth with a few stones (and, over chalk, a
+                            // few chalk lumps and flints worked up from below)
+                            const mottle = cloudValueNoise(x / 3, y / 2, (seed & 0xffff) + 91);
+                            const deep = below > compact * 0.6;
+                            rockTone[i] = fine < 0.045 ? 27 : chalk && fine < (deep ? 0.12 : 0.07) ? 28 : chalk && fine < 0.08 ? 4 : deep ? (mottle < 0.45 ? 25 : 26) : mottle < 0.45 ? 24 : 25;
+                            continue;
+                        }
+                        const t = y + x * dip + wander[x] * scaleDistance(5); // depth through the layers
+                        const n = cloudValueNoise(0.5, t / scaleDistance(4.5), noiseSeed); // which layer
+                        let tone;
+                        const intoRock = below - compact;
+                        // how weathered: broken blocks at the top of the rock, fading into the bedding
+                        const broken = intoRock < weathered ? 1 : intoRock < weathered * 2 ? 1 - (intoRock - weathered) / weathered : 0;
+                        if (broken > 0 && fine < broken * 0.98 + 0.01 && (broken >= 1 || hashByte(i * 5 + 1) / 255 < broken)) {
+                            if (chalk) {
+                                // blocks a few cells across, offset row by row like brickwork, with dark joints
+                                // irregular blocks: joints wander and only some of them show, so it reads as
+                                // broken rock rather than brickwork
+                                const yy = y + Math.round(cloudValueNoise(x / 5, 3.3, seed & 0xffff) * 2);
+                                const bh = scaleCells(3),
+                                    row = Math.floor(yy / bh);
+                                const bw = scaleCells(4 + (hashByte(row * 131 + (seed & 0xff)) % 4));
+                                const xx = x + Math.round(cloudValueNoise(y / 4, 7.7, seed & 0xffff) * 2) + row * 5;
+                                const col = Math.floor(xx / bw);
+                                const horizontal = yy % bh === 0 && hashByte(col * 31 + row * 17 + 3) < 150;
+                                const vertical = xx % bw === 0 && hashByte(col * 29 + row * 13 + 9) < 120;
+                                tone = horizontal || vertical ? 15 : 14;
+                                if (fine < 0.012) tone = 4; // flints loose in the broken chalk too
+                            } else tone = fine < 0.5 ? 22 : 8;
+                            rockTone[i] = tone;
+                            continue;
+                        }
+                        if (chalk) {
+                            tone = n < 0.18 ? 3 : n < 0.5 ? 1 : n < 0.8 ? 0 : 2;
+                            // flints lie in rows along the bedding
+                            // (nodules: knobbly lumps a few cells across, strung out along the row)
+                            const row = ((t / scaleDistance(7)) % 1 + 1) % 1,
+                                band = Math.floor(t / scaleDistance(7));
+                            const lump = Math.floor((x + band * 5) / 3);
+                            if (row < 0.2 && hashByte(lump * 13 + band * 977 + noiseSeed) < 70 && (row > 0.04 && row < 0.16 ? fine < 0.97 : fine < 0.55))
+                                tone = fine < 0.25 ? 5 : 4;
+                            else if (fine < 0.0016) tone = 6;
+                        } else {
+                            tone = n < 0.3 ? 9 : n < 0.45 ? 10 : n < 0.55 ? 12 : n < 0.85 ? 7 : 8;
+                            if (Math.abs(n - 0.5) < 0.012) tone = 11; // ironstone seams at the change from clay to sand
+                            else if (fine < 0.0012) tone = 13;
+                        }
+                        rockTone[i] = tone;
+                    }
+            }
+            // water pockets: worked out once per world, then their fill drawn from their moisture
+            let aquiferPockets = null;
+            const aquiferWet = new Uint8Array(CELL_COUNT);
+            let aquiferWetTick = -1e9;
+            function findAquiferPockets() {
+                aquiferPockets = [];
+                const seen = new Uint8Array(CELL_COUNT);
+                for (let i = 0; i < CELL_COUNT; i++) {
+                    if (seen[i] || materialGrid[i] !== AQUIFER) continue;
+                    const cells = [];
+                    const stack = [i];
+                    seen[i] = 1;
+                    while (stack.length) {
+                        const j = stack.pop();
+                        cells.push(j);
+                        const x = j % GRID_WIDTH;
+                        for (const k of [j - 1, j + 1, j - GRID_WIDTH, j + GRID_WIDTH]) {
+                            if (k < 0 || k >= CELL_COUNT || seen[k] || materialGrid[k] !== AQUIFER) continue;
+                            if ((k === j - 1 && x === 0) || (k === j + 1 && x === GRID_WIDTH - 1)) continue;
+                            seen[k] = 1;
+                            stack.push(k);
+                        }
+                    }
+                    cells.sort((a, b) => b - a); // bottom rows first
+                    aquiferPockets.push(cells);
+                }
+            }
+            function updateAquiferFill() {
+                if (!aquiferPockets) findAquiferPockets();
+                if (simulationTick - aquiferWetTick < 30 && simulationTick >= aquiferWetTick) return;
+                aquiferWetTick = simulationTick;
+                for (const cells of aquiferPockets) {
+                    let water = 0;
+                    for (const i of cells) water += materialGrid[i] === AQUIFER ? moistureGrid[i] : 0;
+                    // the water a pocket holds fills it from the bottom up
+                    let wetCells = Math.round((water / AQUIFER_CAPACITY) * 1.05);
+                    for (const i of cells) aquiferWet[i] = wetCells-- > 0 ? 1 : 0;
+                }
+            }
             function layNoise(groundRng, wavelength, octaves) {
                 return backdropNoise(groundRng, wavelength, octaves, false); // smooth 1D noise in about [-1, 1]
             }
@@ -4661,6 +5287,31 @@
                         setCell(i % GRID_WIDTH, Math.floor(i / GRID_WIDTH), AQUIFER);
                         moistureGrid[i] = AQUIFER_CAPACITY;
                     }
+                // fissures: thin gravel-filled cracks wandering down through the rock. Roots find them
+                // easy going, so a root that reaches the rock can follow a crack down, and some cracks
+                // lead into water-bearing pockets
+                const fissures = Math.round(GRID_WIDTH / scaleDistance(ROCK_FISSURE_SPACING));
+                for (let n = 0; n < fissures; n++) {
+                    let x = Math.floor(groundRng() * GRID_WIDTH),
+                        y = gravelBottom[x] - 1;
+                    let angle = 90 + (groundRng() - 0.5) * 60;
+                    const length = scaleCells(8 + groundRng() * 22);
+                    let fx = x, fy = y;
+                    for (let step = 0; step < length; step++) {
+                        angle = clamp(angle + (groundRng() - 0.5) * 40, 50, 130); // mostly down, wandering
+                        fx += Math.cos((angle * Math.PI) / 180);
+                        fy += Math.sin((angle * Math.PI) / 180);
+                        x = Math.round(fx);
+                        y = Math.round(fy);
+                        if (!isInsideGrid(x, y) || y >= GRID_HEIGHT - 1) break;
+                        const i = getCellIndex(x, y);
+                        if (materialGrid[i] === AQUIFER) break; // reached water
+                        if (materialGrid[i] === STONE) {
+                            setCell(x, y, GRAVEL);
+                            moistureGrid[i] = 30;
+                        }
+                    }
+                }
             }
 
             // ---------------------------------------------------------------------------------
@@ -4909,7 +5560,7 @@
             }
             function windHeightProfile(y) {
                 // stronger well above the ground
-                return 0.35 + 0.65 * clamp((averageTerrainSurface - y) / (GRID_HEIGHT * 0.45), 0, 1);
+                return 0.35 + 0.65 * clamp((averageTerrainSurface - y) / (SCENE_HEIGHT * 0.45), 0, 1);
             }
             function windPush(i, y) {
                 // 0..~1: how hard the wind pushes on whatever is in this cell
@@ -5093,6 +5744,7 @@
             }
             function stepFall(p) {
                 const fall = p.falling;
+                clearRot(p); // the wood is on the move: brackets and rot marks would be left hanging in the air
                 fall.speed += 0.0035 * Math.sin(fall.angle + 0.12); // gravity pulls harder the further it leans
                 const target = Math.min(FALL_MAX_ANGLE, fall.angle + fall.speed);
                 // advance in steps of about one cell at the crown, stopping at the first contact
@@ -5137,6 +5789,8 @@
                         [36, "blackthorn"], [195, "dog rose"], [310, "crab apple"], [492, "elder"],
                         // and the layer in between: foxgloves, a bramble patch, a holly
                         [150, "foxglove"], [425, "bramble"], [240, "holly"],
+                        // and more kinds of tree to break up the skyline
+                        [103, "hazel"], [287, "ash"], [379, "rowan"], [470, "wild cherry"], [516, "ash"],
                     ],
                 },
                 birch: {
@@ -5177,8 +5831,13 @@
                     for (let y = h[x]; y < GRID_HEIGHT; y++) {
                         setCell(x, y, y < h[x] + depth ? SOIL : STONE);
                         if (materialGrid[getCellIndex(x, y)] === SOIL) {
+                            // not uniform: richer and poorer patches across the valley, richer topsoil over
+                            // leaner subsoil, and a little cell-to-cell grain
+                            const patch = cloudValueNoise(x / scaleDistance(30), y / scaleDistance(9), worldSeed & 0xffff) * 0.65 +
+                                cloudValueNoise(x / scaleDistance(9), y / scaleDistance(4), (worldSeed & 0xffff) + 7) * 0.35;
+                            const below = (y - h[x]) / Math.max(1, depth);
                             fertilityGrid[getCellIndex(x, y)] = clamp(
-                                INITIAL_SOIL_FERTILITY + Math.floor((rng() - 0.5) * 32),
+                                INITIAL_SOIL_FERTILITY + Math.round((patch - 0.5) * 140 + (0.35 - below) * 44) + Math.floor((rng() - 0.5) * 10),
                                 0,
                                 255,
                             );
@@ -5201,7 +5860,7 @@
                 const archetype = (name) => ARCHETYPES.findIndex((entry) => entry.name === name);
                 const planting = PLANTINGS[worldPlanting] ?? PLANTINGS.mixed;
                 planting.founders.map(([baseX, name]) => [baseX, archetype(name)]).forEach(([baseX, archetypeIndex]) => {
-                    const x = scaleCells(baseX);
+                    const x = scaleCells(baseX * LAYOUT_STRETCH);
                     const genome = chooseStartingArchetype(archetypeIndex, h[x]);
                     if (genome.form === PlantForm.FERN) {
                         for (let dy = 0; dy <= scaleCells(3); dy++)
@@ -5244,8 +5903,8 @@
                         if (isInsideGrid(x + dx, 0)) spawnSeed(x + dx, h[x + dx] - 1, genome);
                 });
                 // Bluebell colonies under the oak and the beech, and one more somewhere along the valley.
-                for (const at of planting.bluebells ?? [172, 264]) seedBluebells(scaleCells(at), scaleCells(14));
-                seedBluebells(scaleCells(60 + Math.floor(rng() * 400)), scaleCells(10));
+                for (const at of planting.bluebells ?? [172, 264]) seedBluebells(scaleCells(at * LAYOUT_STRETCH), scaleCells(14));
+                seedBluebells(scaleCells((60 + Math.floor(rng() * 400)) * LAYOUT_STRETCH), scaleCells(10));
                 seedWorms();
                 seedAntColonies();
                 seedBees();
@@ -5568,8 +6227,11 @@
                 const low = Math.min(offset, offset - Math.sign(offset)) + (offset > 0 ? 0.5 : -0.5),
                     high = Math.max(offset, offset - Math.sign(offset)) + (offset > 0 ? 0.5 : -0.5);
                 const reach = Math.ceil(Math.abs(offset)) + 1;
-                const nx = segment.nx,
-                    ny = segment.ny;
+                // (the stored perpendicular is per step of the line, which is √2 long on a diagonal: measured
+                // with it, each layer came out only 0.7 cells thick and diagonal limbs were full of holes)
+                const length = Math.hypot(segment.nx, segment.ny) || 1;
+                const nx = segment.nx / length,
+                    ny = segment.ny / length;
                 for (const i of segment.cells) {
                     if (!ownsCell(p, i)) continue; // this bit of the branch has gone (rotted, broken)
                     const cx = i % GRID_WIDTH,
@@ -5821,7 +6483,11 @@
                     if (!open && !(intoRock && p.rng() < ROOT_ROCK_PENETRATION)) continue;
                     const alignment = Math.cos(((angle - tip.preferredAngle) * Math.PI) / 180);
                     const score =
-                        alignment + (moistureGrid[i] / 255) * ROOT_HYDROTROPISM + p.rng() * 0.7 - (intoRock ? 0.5 : 0);
+                        alignment +
+                        (moistureGrid[i] / 255) * ROOT_HYDROTROPISM +
+                        p.rng() * 0.7 -
+                        (intoRock ? 0.5 : 0) +
+                        (tip.inPocket && ground === AQUIFER ? 1.2 : 0); // roots in a water pocket stay in it
                     if (score > bestScore) {
                         bestScore = score;
                         best = { angle, nx, ny, i };
@@ -5840,6 +6506,21 @@
                 claimRootCell(p, best.i, tip.order);
                 // remember where along its root this cell is, and the root's direction, for thickening later
                 p.rootPath.push({ i: best.i, order: tip.order, along: tip.length / Math.max(1, tip.maxLength), angle: tip.angle, width: 1 });
+                if (materialGrid[best.i] === AQUIFER) {
+                    // found water in the rock: keep going through the pocket and fan out into it, the
+                    // way real roots proliferate where they strike a rich patch
+                    if (!tip.inPocket) {
+                        tip.inPocket = true;
+                        tip.maxLength = Math.max(tip.maxLength, tip.length + scaleDistance(16));
+                    }
+                    if ((p.pocketTips ?? 0) < ROOT_POCKET_TIPS && p.rng() < 0.3) {
+                        p.pocketTips = (p.pocketTips ?? 0) + 1;
+                        const angle = tip.angle + (p.rng() < 0.5 ? -1 : 1) * (40 + p.rng() * 70);
+                        const pocketTip = newRootTip(tip.x, tip.y, angle, Math.min(ROOT_MAX_ORDER, tip.order + 1), scaleDistance(6 + p.rng() * 8));
+                        pocketTip.inPocket = true;
+                        p.rootTips.push(pocketTip);
+                    }
+                }
                 const branching = g.rootBranching ?? DEFAULT_GENOME.rootBranching;
                 if (tip.order < ROOT_MAX_ORDER && tip.sinceBranch >= 2 && p.rng() < branching) {
                     tip.sinceBranch = 0;
@@ -6299,7 +6980,7 @@
                     const { cellIndex, depth } = candidates[n];
                     const material = materialGrid[cellIndex];
                     if (rng() >= decayChance(material, depth, maxDepth)) continue;
-                    const out = material === LEAF && rng() < 0.75 ? AIR : LITTER;
+                    const out = material === LEAF ? (rng() < 0.75 ? AIR : LITTER) : rng() < DEAD_WOOD_TO_LITTER ? LITTER : AIR;
                     setCell(cellIndex % GRID_WIDTH, Math.floor(cellIndex / GRID_WIDTH), out);
                 }
                 // a dead tree's leaves wither and drop within days, whatever the state of its wood
@@ -6309,6 +6990,181 @@
                 }
                 if (!p.fallen) collapseUnsupported(p); // a fallen log lies whole, not hanging from its base
                 pruneCells(p);
+            }
+            // ---------------------------------------------------------------------------------
+            // Wood-rotting fungi: spores find standing dead trees and fallen logs, spread through the
+            // dead wood, rot it several times faster (more of it crumbles to litter, which feeds the soil
+            // below) and put out brackets on the bark, mostly from late summer into autumn.
+            //   turkey tail          - small banded shelves, on almost any dead wood
+            //   birch polypore       - chunky pale hoof brackets, only on birch
+            //   chicken of the woods - bright orange-yellow tiers, on dead oak, cherry and yew; rare
+            // ---------------------------------------------------------------------------------
+            const ROT_FUNGI = [
+                null,
+                {
+                    name: "Turkey tail",
+                    note: "a bracket fungus rotting the dead wood",
+                    // [dx out from the bark, dy, part]; part 0 = top, 1 = band, 2 = rim
+                    shape: [[1, 0, 0], [2, 0, 1], [3, 0, 2], [1, 1, 1], [2, 1, 2]],
+                    colours: [[92, 64, 52], [176, 140, 96], [236, 224, 196]],
+                    season: [0.35, 0.95],
+                },
+                {
+                    name: "Birch polypore",
+                    note: "a bracket fungus that grows only on dead birch",
+                    shape: [[1, -1, 0], [2, -1, 0], [1, 0, 1], [2, 0, 1], [3, 0, 2], [1, 1, 1], [2, 1, 2]],
+                    colours: [[190, 160, 120], [234, 228, 212], [248, 246, 238]],
+                    season: [0.4, 1],
+                },
+                {
+                    name: "Chicken of the woods",
+                    note: "a bright bracket fungus on dead oak, cherry and yew",
+                    shape: [[1, 0, 0], [2, 0, 0], [3, 0, 1], [4, 0, 2], [1, 1, 1], [2, 1, 1], [3, 1, 2], [1, 2, 0], [2, 2, 1], [3, 2, 2]],
+                    colours: [[236, 110, 28], [246, 160, 40], [252, 214, 80]],
+                    season: [0.38, 0.72],
+                },
+            ];
+            const rotGrid = new Uint8Array(CELL_COUNT), // dead wood the fungus has reached: its kind
+                bracketGrid = new Uint8Array(CELL_COUNT); // bracket pixels in the air: kind * 4 + part + 1
+            const ROT_COLONISE_CHANCE = 0.004, // per decay pass of a dead tree (every 12 ticks)
+                ROT_SPREAD_TRIES = 6, // cells the fungus tries to reach each pass
+                ROT_DECAY_CHANCE = 0.04, // per pass, for each of a few colonised cells
+                ROT_LITTER = 0.65, // share of rotted wood that falls as litter (feeding the soil)
+                ROT_MAX_BRACKETS = 12;
+            function rotKindFor(p) {
+                const name = (speciesRecords.get(p.speciesId)?.name ?? "").toLowerCase();
+                if (name.includes("birch") && rng() < 0.75) return 2;
+                if ((name.includes("oak") || name.includes("cherry") || name.includes("yew")) && rng() < 0.22) return 3;
+                return 1;
+            }
+            function woodOf(p, i) {
+                return materialGrid[i] === WOOD && plantIdGrid[i] === p.id;
+            }
+            function rotDeadWood(p) {
+                // called on each decay pass of a dead tree or shrub
+                if (p.form === PlantForm.FERN) return;
+                if (!p.rot) {
+                    // damp weather and damp ground help spores take
+                    const damp = weather.rain ? 2 : 1;
+                    if (rng() >= ROT_COLONISE_CHANCE * damp) return;
+                    const wood = p.cells.filter((i) => woodOf(p, i));
+                    if (!wood.length) return;
+                    // it gets in low down, where the wood stays wettest
+                    let start = -1;
+                    for (const i of wood) {
+                        if (i <= start) continue;
+                        let around = 0;
+                        for (const d of [-1, 1, -GRID_WIDTH, GRID_WIDTH]) if (woodOf(p, i + d)) around++;
+                        if (around >= 3) start = i;
+                    }
+                    if (start < 0) start = wood[0];
+                    p.rot = { kind: rotKindFor(p), cells: [start], brackets: [] };
+                    rotGrid[start] = p.rot.kind;
+                }
+                const rot = p.rot;
+                rot.cells = rot.cells.filter((i) => woodOf(p, i));
+                if (!rot.cells.length) return;
+                // spread through the dead wood
+                for (let t = 0; t < ROT_SPREAD_TRIES; t++) {
+                    const i = rot.cells[Math.floor(rng() * rot.cells.length)];
+                    const [dx, dy] = NEIGHBOURS_8[Math.floor(rng() * 8)];
+                    const x = (i % GRID_WIDTH) + dx,
+                        y = Math.floor(i / GRID_WIDTH) + dy;
+                    if (!isInsideGrid(x, y)) continue;
+                    const j = getCellIndex(x, y);
+                    if (woodOf(p, j) && !rotGrid[j]) {
+                        rotGrid[j] = rot.kind;
+                        rot.cells.push(j);
+                    }
+                }
+                // and rot it (once it has a hold: a young colony only spreads)
+                // from the outside in, so the wood crumbles away rather than going moth-eaten
+                for (let t = 0; t < (rot.cells.length >= 12 ? 4 : 0); t++) {
+                    let i = -1;
+                    for (let k = 0; k < 6 && i < 0; k++) {
+                        const j = rot.cells[Math.floor(rng() * rot.cells.length)];
+                        if (materialGrid[j - 1] === AIR || materialGrid[j + 1] === AIR || materialGrid[j - GRID_WIDTH] === AIR || materialGrid[j + GRID_WIDTH] === AIR) i = j;
+                    }
+                    if (i < 0 || rng() >= ROT_DECAY_CHANCE) continue;
+                    rotGrid[i] = 0;
+                    setCell(i % GRID_WIDTH, Math.floor(i / GRID_WIDTH), rng() < ROT_LITTER ? LITTER : AIR);
+                }
+                updateBrackets(p);
+            }
+            function updateBrackets(p) {
+                const rot = p.rot;
+                const kind = ROT_FUNGI[rot.kind];
+                const phase = seasonState().yearPhase;
+                const inSeason = phase >= kind.season[0] && phase <= kind.season[1];
+                // brackets whose wood has gone fall away; out of season they wither one by one
+                rot.brackets = rot.brackets.filter((b) => {
+                    const keep = woodOf(p, b.anchor) && (inSeason || rng() > 0.02);
+                    if (!keep) for (const c of b.cells) if (bracketGrid[c]) bracketGrid[c] = 0;
+                    return keep;
+                });
+                const want = Math.min(ROT_MAX_BRACKETS, Math.floor(rot.cells.length / 5));
+                if (!inSeason || rot.brackets.length >= want || rng() > 0.3) return;
+                // a new bracket on the bark: on the side of a standing trunk, on top of a fallen log;
+                // brackets come out of the thick wood, so look for a colonised cell with wood behind it
+                // (low on the trunk if it can, where the wood stays damp)
+                const open = (x, y) => isInsideGrid(x, y) && materialGrid[getCellIndex(x, y)] === AIR && !bracketGrid[getCellIndex(x, y)];
+                let cells = null,
+                    anchor = -1;
+                const extraTiers = [];
+                const tries = [];
+                for (let t = 0; t < 12; t++) tries.push(rot.cells[Math.floor(rng() * rot.cells.length)]);
+                tries.sort((a, b) => b - a);
+                for (const i of tries) {
+                    const ax = i % GRID_WIDTH,
+                        ay = Math.floor(i / GRID_WIDTH);
+                    if (p.fallen) {
+                        if (open(ax, ay - 1) && open(ax + 1, ay - 1)) cells = [[ax, ay - 1, 0], [ax + 1, ay - 1, 2]];
+                    } else {
+                        for (const side of rng() < 0.5 ? [-1, 1] : [1, -1]) {
+                            if (!woodOf(p, i - side)) continue; // bark, with wood behind it
+                            const stamp = kind.shape.map(([dx, dy, part]) => [ax + side * dx, ay + dy, part]);
+                            // whole brackets only, standing clear of the bark (not tucked into a hole)
+                            if (stamp.every(([x, y]) => open(x, y))) {
+                                cells = stamp;
+                                // they grow in tiers: more brackets stacked above and below on the same bark,
+                                // each one fixed to its own piece of bark (so it drops off if that rots)
+                                const rise = Math.max(...kind.shape.map((c) => c[1])) - Math.min(...kind.shape.map((c) => c[1])) + 2;
+                                for (const tier of [-rise, rise, -2 * rise]) {
+                                    const bark = i + tier * GRID_WIDTH;
+                                    if (bark < 0 || bark >= CELL_COUNT || !woodOf(p, bark) || !woodOf(p, bark - side) || rng() < 0.35) continue;
+                                    const more = kind.shape.map(([dx, dy, part]) => [ax + side * dx, ay + dy + tier, part]);
+                                    if (more.every(([x, y]) => open(x, y))) extraTiers.push({ anchor: bark, stamp: more });
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    if (cells) {
+                        anchor = i;
+                        break;
+                    }
+                }
+                if (!cells) return;
+                for (const piece of [{ anchor, stamp: cells }, ...extraTiers]) {
+                    const bracket = { anchor: piece.anchor, cells: [] };
+                    for (const [x, y, part] of piece.stamp) {
+                        const i = getCellIndex(x, y);
+                        bracketGrid[i] = rot.kind * 4 + part + 1;
+                        bracket.cells.push(i);
+                    }
+                    rot.brackets.push(bracket);
+                }
+            }
+            function clearRot(p) {
+                // the tree has gone: its fungus goes with it
+                if (!p.rot) return;
+                for (const i of p.rot.cells) rotGrid[i] = 0;
+                for (const b of p.rot.brackets) for (const c of b.cells) bracketGrid[c] = 0;
+                p.rot = null;
+            }
+            function bracketColour(value) {
+                const kind = ROT_FUNGI[(value - 1) >> 2];
+                return kind.colours[(value - 1) & 3];
             }
             const SEEDLING_SIZE = 30; // cells: below this a plant can still push its shoot up through foliage
             const DEAD_LEAF_DROP = 0.06; // per decay pass (every 12 ticks), for each leaf of a dead plant
@@ -6341,7 +7197,7 @@
                 for (const i of owned.keys()) {
                     if (reached.has(i)) continue;
                     const material = materialGrid[i];
-                    const out = material === LEAF && rng() < 0.75 ? AIR : LITTER;
+                    const out = material === LEAF ? (rng() < 0.75 ? AIR : LITTER) : rng() < DEAD_WOOD_TO_LITTER ? LITTER : AIR;
                     setCell(i % GRID_WIDTH, Math.floor(i / GRID_WIDTH), out);
                 }
             }
@@ -6361,6 +7217,7 @@
                     p.stateTicks++;
                     if (p.stateTicks % 12 === 0) {
                         decay(p);
+                        rotDeadWood(p);
                         decayRoots(p, 3);
                     }
                     if (!p.cells.some((i) => ownsCell(p, i))) {
@@ -6375,6 +7232,7 @@
                 for (let p of plants)
                     if (p.state === PlantState.REMOVED) {
                         decayRoots(p, Infinity); // whatever is left rots away with the plant
+                        clearRot(p);
                         plantsById.delete(p.id);
                     }
                 plants = plants.filter((p) => p.state !== PlantState.REMOVED);
@@ -7433,7 +8291,7 @@
                     material === GRAVEL
                         ? clamp(m + change, 0, GRAVEL_MAX_MOISTURE) // drains: can't hold much
                         : material === AQUIFER
-                          ? clamp(m + change + AQUIFER_RECHARGE, 0, AQUIFER_CAPACITY) // slowly refills
+                          ? clamp(m + change + aquiferRecharge, 0, AQUIFER_CAPACITY) // refills in wet seasons, sinks in dry ones
                           : clamp(m + change, 0, 255);
                 if (
                     wet &&
@@ -7685,7 +8543,15 @@
                 plant.lastCrown = simulationTick;
             }
             // Moisture diffusion and the main simulation update
+            let aquiferRecharge = AQUIFER_RECHARGE,
+                moistureUpdates = 0;
             function updateMoisture() {
+                // the water table: pockets in the rock fill through the wet half of the year and in rain,
+                // and sink slowly through a dry summer
+                const season = seasonState();
+                const rate = weather.rain ? 0.9 : 0.1 + 0.9 * (season.winter + 0.85 * season.spring + 0.25 * season.autumn) - 0.45 * season.summer;
+                const turn = (++moistureUpdates * 0.6180339887) % 1; // spreads whole steps evenly over updates
+                aquiferRecharge = rate >= 0 ? (turn < rate ? AQUIFER_RECHARGE : 0) : turn < -rate ? -1 : 0;
                 moistureBuffer.set(moistureGrid);
                 for (let y = 0; y < GRID_HEIGHT; y++)
                     for (let x = 0; x < GRID_WIDTH; x++) {
@@ -7714,6 +8580,14 @@
                 else if (m === LITTER) updateLitter(x, y, i);
                 else if (m === SOIL) {
                     if (rng() < GRASS_SPROUT_CHANCE && sproutGrassRoot(x, y, i)) return;
+                    // loose new soil heaped above the valley's own ground settles, washes and blows away
+                    // over the years, so the land keeps its shape instead of slowly filling up
+                    if (terrainHeightmap && y < terrainHeightmap[x] - 2 && rng() < SOIL_SETTLING && isAir(x, y - 1)) {
+                        if (y + 1 < GRID_HEIGHT && materialGrid[i + GRID_WIDTH] === SOIL)
+                            fertilityGrid[i + GRID_WIDTH] = Math.min(255, fertilityGrid[i + GRID_WIDTH] + (fertilityGrid[i] >> 1));
+                        setCell(x, y, AIR);
+                        return;
+                    }
                     updateGranular(x, y, i);
                 }
                 else if (m === WATER) updateWater(x, y, i);
@@ -7769,6 +8643,7 @@
             }
             function step() {
                 updateWind();
+                updateClouds();
                 if (simulationTick < meddle.droughtUntil) {
                     weather.rain = false; // forced drought: not a drop
                     weather.left = Math.max(weather.left, 60);
@@ -7853,7 +8728,7 @@
                     skyGlowColumn[x] = 0.32 + 0.68 * Math.exp(-(d * d) / (2 * 0.26 * 0.26));
                 }
                 for (let y = 0; y < GRID_HEIGHT; y++) {
-                    const t = clamp(y / (GRID_HEIGHT * 0.5), 0, 1); // 0 = top of the sky, 1 = the visible horizon line
+                    const t = clamp(y / (SCENE_TOP + SCENE_HEIGHT * 0.5), 0, 1); // 0 = top of the sky, 1 = the visible horizon line
                     // purple overhead -> pink -> orange -> deep red at the horizon
                     const stops = [
                         [0, 96, 70, 140],
@@ -7902,6 +8777,9 @@
                     tintG = brightness * (1 + 0.03 * sky.warmth - 0.06 * nightness),
                     tintB = brightness * (1 - 0.22 * sky.warmth + 0.22 * nightness);
                 const glowing = updateSkyGlow(sky);
+                rasterizeClouds(sky);
+                if (rockTonesFor !== worldSeed >>> 0) buildRockTones();
+                updateAquiferFill();
                 // shadows ease between the last two light updates instead of stepping 5 times a second
                 const lightBlend = clamp((simulationTick - lastDisplayLightTick) / LIGHT_UPDATE_INTERVAL, 0, 1);
                 const swaying = Math.abs(wind.velocity) > 0.02 && !heatmapMode;
@@ -7961,7 +8839,8 @@
                     // Swaying: above ground, plant pixels are drawn from a cell upwind of here, further the
                     // higher they are, so plants bend with the wind and wave as gusts pass along.
                     let c = i,
-                        m = materialGrid[i];
+                        m = materialGrid[i],
+                        bracketAt = i; // where a bracket fungus drawn here grows (it sways with its wood)
                     if (swaying) {
                         const x = i % GRID_WIDTH,
                             y = (i / GRID_WIDTH) | 0;
@@ -7976,6 +8855,7 @@
                                 swayShiftState[i] = shift = clamp(Math.round(bend), -MAX_SWAY, MAX_SWAY);
                             if (shift) {
                                 const sx = x - shift;
+                                bracketAt = sx >= 0 && sx < GRID_WIDTH ? i - shift : -1;
                                 const mj = sx >= 0 && sx < GRID_WIDTH ? materialGrid[i - shift] : AIR;
                                 if ((mj === LEAF || mj === WOOD) && plantIdGrid[i - shift]) {
                                     c = i - shift;
@@ -7990,6 +8870,39 @@
                         r = b[0] + light,
                         g = b[1] + light,
                         bl = b[2] + light;
+                    if (m === STONE) {
+                        // the bedrock in its layers
+                        const tone = ROCK_TONES[rockTone[i]].colour;
+                        r = tone[0] + light * 0.6;
+                        g = tone[1] + light * 0.6;
+                        bl = tone[2] + light * 0.6;
+                    } else if (m === AQUIFER && !aquiferWet[i]) {
+                        // the part of a water pocket above its water line: drained gravel, still damp
+                        r = 128 + light;
+                        g = 118 + light;
+                        bl = 104 + light;
+                    } else if (m === GRAVEL) {
+                        // the broken layer between soil and rock, or a dark fissure down through it
+                        const tone = ROCK_TONES[rockTone[i]].colour;
+                        r = tone[0] + light * 0.5;
+                        g = tone[1] + light * 0.5;
+                        bl = tone[2] + light * 0.5;
+                    } else if (m === SOIL || m === GRASS_ROOT) {
+                        // the soil shows how rich it is: worn-out soil a pale yellowish brown, ordinary soil
+                        // mid brown, soil fed by rot and worms a deep dark brown
+                        const f = fertilityGrid[i];
+                        const tone = SOIL_TONES[f >> 2];
+                        r = tone[0] + light;
+                        g = tone[1] + light;
+                        bl = tone[2] + light;
+                        const sub = subsoilBlend[i];
+                        if (sub) {
+                            const k = sub / 255;
+                            r += (100 - r) * k;
+                            g += (76 - g) * k;
+                            bl += (53 - bl) * k;
+                        }
+                    }
                     if (m === AIR) {
                         if (backdropSnowNeed[i] < snowShift) {
                             r = backdropSnowColours[i * 3];
@@ -8007,10 +8920,26 @@
                             bl += (218 - bl) * winterSky;
                         }
                         if (overcastSky) {
-                            // rainy spells grey the whole sky over instead of drawing cloud shapes
+                            // rainy spells grey the whole sky over as well as filling it with cloud
                             r += (150 - r) * overcastSky;
                             g += (156 - g) * overcastSky;
                             bl += (164 - bl) * overcastSky;
+                        }
+                        const cover = i < cloudRows * GRID_WIDTH ? cloudAlpha[i] : 0;
+                        if (cover) {
+                            // lit side near white, shaded side a cool grey; both greyer and darker in
+                            // rain. Mixed over the sky with the sky's own grain kept on top.
+                            const lit = cloudLit[i];
+                            const rainGrey = cloudOvercast;
+                            const lr = 250 - 64 * rainGrey, lg = 250 - 60 * rainGrey, lb = 248 - 52 * rainGrey;
+                            const sr = 150 - 40 * rainGrey, sg = 158 - 40 * rainGrey, sb = 178 - 42 * rainGrey;
+                            const cr = sr + (lr - sr) * lit + light * 0.6,
+                                cg = sg + (lg - sg) * lit + light * 0.6,
+                                cb = sb + (lb - sb) * lit + light * 0.6;
+                            const a = cover * 0.92;
+                            r += (cr - r) * a;
+                            g += (cg - g) * a;
+                            bl += (cb - bl) * a;
                         }
                     } else if (tunnelGrid[i] && (m === SOIL || m === GRASS_ROOT)) {
                         // ant galleries: dark open passages in the soil
@@ -8219,6 +9148,18 @@
                         g = t[1] + light * 0.3;
                         bl = t[2] + light * 0.3;
                     }
+                    if (bracketAt >= 0 && bracketGrid[bracketAt] && m === AIR) {
+                        // a bracket fungus on dead wood
+                        const t = bracketColour(bracketGrid[bracketAt]);
+                        r = t[0] + light * 0.25;
+                        g = t[1] + light * 0.25;
+                        bl = t[2] + light * 0.25;
+                    } else if (m === WOOD && rotGrid[c]) {
+                        // rotting wood goes soft and pale, with the fungus showing through in places
+                        r += (148 - r) * 0.4;
+                        g += (130 - g) * 0.4;
+                        bl += (110 - bl) * 0.4;
+                    }
                     if (
                         m === AIR ||
                         m === LEAF ||
@@ -8237,7 +9178,9 @@
                         // sunrise/sunset: red-orange near the horizon, pink to purple higher up, strongest
                         // on the sun's side; distant ridges catch a little of it too
                         const row = Math.floor(i / GRID_WIDTH) * 4;
-                        const a = skyGlowRow[row] * skyGlowColumn[i % GRID_WIDTH] * (backdropSky[i] ? 1 : 0.55);
+                        // clouds catch the low sun hardest, their undersides most of all
+                        const cover = i < cloudRows * GRID_WIDTH ? cloudAlpha[i] : 0;
+                        const a = Math.min(1, skyGlowRow[row] * skyGlowColumn[i % GRID_WIDTH] * (backdropSky[i] ? 1 : 0.55) * (1 + cover * (0.3 + 0.5 * (1 - cloudLit[i]))));
                         r += (skyGlowRow[row + 1] - r) * a;
                         g += (skyGlowRow[row + 2] - g) * a;
                         bl += (skyGlowRow[row + 3] - bl) * a;
@@ -9196,9 +10139,9 @@
             //   vignette - edges darkened in stepped rings rather than a smooth (blurry) fade
             //   palette  - every colour snapped to a hand-picked autumn palette (optionally plus a few
             //              colours from this frame), which is what makes it read as deliberate pixel art
-            //   dither   - in-between colours made by mixing two palette colours in a pattern; only in the
-            //              sky and the distant hills, where smooth gradients would otherwise band. Plants,
-            //              soil, flowers and insects are already textured, so they are only snapped.
+            //   dither   - in-between colours made by laying out the two nearest palette colours in an
+            //              ordered pattern (so hues survive, not just brightness); strongest in the sky,
+            //              which gets its own colours from the frame and is smoothed first so it bands cleanly
             // ---------------------------------------------------------------------------------
             const hexColours = (list) => list.map((hex) => [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)]);
             // colours every season shares: bark, soil, roots, stone, water, petals and the insects
@@ -9310,6 +10253,7 @@
                         if (shift && (materialGrid[i - shift] === LEAF || materialGrid[i - shift] === WOOD)) kind = EXPORT_KIND.DETAIL;
                         else if (beeCellGrid[i] || antCellGrid[i] || moonMask[i]) kind = EXPORT_KIND.DETAIL;
                         else if (wildflowerPixels[i]) kind = EXPORT_KIND.DETAIL;
+                        else if (bracketGrid[i]) kind = EXPORT_KIND.DETAIL;
                         else if (bluebellHeight[x] && bluebellAt(x, y)) kind = EXPORT_KIND.DETAIL;
                     } else if (m === SNOW || m === WATER) kind = EXPORT_KIND.FLAT;
                     kinds[i] = kind;
@@ -9372,6 +10316,88 @@
                 }
                 return extras;
             }
+            function skyPaletteOfFrame(colours, kinds, frame, count) {
+                // the frame's own sky, boiled down to `count` colours by median cut, so a sunrise or sunset
+                // keeps its own peach, rose and violet instead of being snapped to the season's stock blues
+                const bins = new Map();
+                for (let fy = 0; fy < frame.height; fy++)
+                    for (let fx = 0; fx < frame.width; fx++) {
+                        if (kinds[(frame.y + fy) * GRID_WIDTH + frame.x + fx] !== EXPORT_KIND.SKY) continue;
+                        const q = (fy * frame.width + fx) * 3;
+                        const r = clamp(colours[q], 0, 255), g = clamp(colours[q + 1], 0, 255), b = clamp(colours[q + 2], 0, 255);
+                        const key = ((r >> 2) << 12) | ((g >> 2) << 6) | (b >> 2);
+                        const e = bins.get(key) ?? [0, 0, 0, 0];
+                        e[0]++, (e[1] += r), (e[2] += g), (e[3] += b);
+                        bins.set(key, e);
+                    }
+                // each distinct shade counts by the square root of its area, so a thin band of sunset glow
+                // near the horizon still gets colours of its own next to the big plain sky above it
+                const points = [...bins.values()].map(([n, r, g, b]) => ({ c: [r / n, g / n, b / n], w: Math.sqrt(n) }));
+                if (!points.length) return [];
+                const boxes = [points];
+                const spread = (box) => {
+                    let best = 0, channel = 0;
+                    for (let k = 0; k < 3; k++) {
+                        let lo = 255, hi = 0;
+                        for (const p of box) (lo = Math.min(lo, p.c[k])), (hi = Math.max(hi, p.c[k]));
+                        const s = (hi - lo) * (k === 1 ? 1.2 : 1);
+                        if (s > best) (best = s), (channel = k);
+                    }
+                    return { s: best * Math.sqrt(box.reduce((t, p) => t + p.w, 0)), channel };
+                };
+                while (boxes.length < count) {
+                    let pick = -1, pickSpread = null;
+                    boxes.forEach((box, k) => {
+                        if (box.length < 2) return;
+                        const s = spread(box);
+                        if (!pickSpread || s.s > pickSpread.s) (pick = k), (pickSpread = s);
+                    });
+                    if (pick < 0 || pickSpread.s < 1) break;
+                    const box = boxes[pick].sort((a, b) => a.c[pickSpread.channel] - b.c[pickSpread.channel]);
+                    const half = box.reduce((t, p) => t + p.w, 0) / 2;
+                    let acc = 0, cut = 1;
+                    for (; cut < box.length - 1; cut++) if ((acc += box[cut - 1].w) >= half) break;
+                    boxes.splice(pick, 1, box.slice(0, cut), box.slice(cut));
+                }
+                return boxes.map((box) => {
+                    const w = box.reduce((t, p) => t + p.w, 0);
+                    return [0, 1, 2].map((k) => Math.round(box.reduce((t, p) => t + p.c[k] * p.w, 0) / w));
+                });
+            }
+            function pairQuantizer(palette) {
+                // For any colour: the two palette colours whose mix comes closest to it, and how much of the
+                // second one the mix needs. Ordered dithering then lays the two out in a pattern, so a
+                // gradient becomes clean two-colour bands that keep their hue (the old dither only nudged
+                // brightness, which turned a pink-to-gold sunset into blues and greys).
+                const cache = new Map();
+                const W = [2.2, 4, 2.6]; // roughly how strongly the eye weighs red, green and blue
+                return (r, g, b) => {
+                    const key = ((r >> 2) << 12) | ((g >> 2) << 6) | (b >> 2);
+                    let hit = cache.get(key);
+                    if (hit) return hit;
+                    let a = palette[0], aDist = Infinity;
+                    for (const c of palette) {
+                        const d = W[0] * (r - c[0]) ** 2 + W[1] * (g - c[1]) ** 2 + W[2] * (b - c[2]) ** 2;
+                        if (d < aDist) (aDist = d), (a = c);
+                    }
+                    hit = { a, b: a, t: 0 };
+                    let bestError = aDist;
+                    for (const c of palette) {
+                        if (c === a) continue;
+                        const dr = c[0] - a[0], dg = c[1] - a[1], db = c[2] - a[2];
+                        const span = W[0] * dr * dr + W[1] * dg * dg + W[2] * db * db;
+                        if (!span) continue;
+                        const t = clamp((W[0] * (r - a[0]) * dr + W[1] * (g - a[1]) * dg + W[2] * (b - a[2]) * db) / span, 0, 1);
+                        if (t <= 0) continue;
+                        const er = r - a[0] - dr * t, eg = g - a[1] - dg * t, eb = b - a[2] - db * t;
+                        // mixing two very different colours reads as noise, not as the colour between them
+                        const error = W[0] * er * er + W[1] * eg * eg + W[2] * eb * eb + 0.12 * span * t * (1 - t);
+                        if (error < bestError) (bestError = error), (hit = { a, b: c, t });
+                    }
+                    cache.set(key, hit);
+                    return hit;
+                };
+            }
             function processExport() {
                 // the finished picture at cell resolution, as an ImageData of the frame
                 const frame = exportFrame();
@@ -9382,38 +10408,21 @@
                     vignette = exportControls.vignette.checked;
                 const look = SEASON_LOOKS[exportLookName()];
                 const paletteMode = exportControls.palette.value;
-                const palette = paletteMode === "none" ? null : paletteMode === "seasonFrame" ? [...look.palette, ...framePaletteExtras(pixels, frame, look.palette)] : look.palette;
                 const { warm, cool, saturation, contrast } = look.grade;
                 const vignetteAmount = (Number(exportControls.vignetteStrength.value) / 100) * 0.45;
                 const smoothing = Number(exportControls.vignetteSmooth.value) / 100;
                 // 0: three hard rings ... 1: a continuous fade (still per cell, so still crisp)
                 const vignetteSteps = smoothing >= 0.999 ? 0 : Math.round(3 + smoothing * smoothing * 12);
-                const ditherMode = palette ? exportControls.dither.value : "none";
+                const ditherMode = paletteMode === "none" ? "none" : exportControls.dither.value;
                 const strength = Number(exportControls.strength.value) / 100;
                 const coarse = exportControls.coarse.checked;
-                const kindWeight = [0, 1, 0.65, 0.4]; // detail, sky, hills, snow & water
-                const cache = new Map();
-                const nearest = (r, g, b) => {
-                    const key = ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
-                    let hit = cache.get(key);
-                    if (hit) return hit;
-                    let best = palette[0],
-                        bestDistance = Infinity;
-                    for (const c of palette) {
-                        const d = colourDistance(r, g, b, c[0], c[1], c[2]);
-                        if (d < bestDistance) {
-                            bestDistance = d;
-                            best = c;
-                        }
-                    }
-                    cache.set(key, best);
-                    return best;
-                };
+                const kindWeight = [0.15, 1, 0.6, 0.5]; // detail, sky, hills, snow & water
+                // pass 1: grade and vignette every cell
+                const colours = new Float32Array(frame.width * frame.height * 3);
+                const fades = new Float32Array(frame.width * frame.height);
                 for (let fy = 0; fy < frame.height; fy++)
                     for (let fx = 0; fx < frame.width; fx++) {
-                        const x = frame.x + fx,
-                            y = frame.y + fy;
-                        const i = y * GRID_WIDTH + x;
+                        const i = (frame.y + fy) * GRID_WIDTH + frame.x + fx;
                         let r = pixels[i * 4],
                             g = pixels[i * 4 + 1],
                             b = pixels[i * 4 + 2];
@@ -9432,7 +10441,6 @@
                             g = 128 + (g - 128) * contrast;
                             b = 128 + (b - 128) * contrast;
                         }
-                        let vignetteFall = 0;
                         if (vignette) {
                             // darker toward the edges: in rings, or smoothed into a fade (per cell, never a blur)
                             const dx = (fx + 0.5 - frame.width / 2) / (frame.width / 2),
@@ -9441,34 +10449,90 @@
                             let fall = clamp((d - 0.55) / (0.55 + 0.25 * smoothing), 0, 1);
                             fall = fall * fall * (3 - 2 * fall); // ease in, so there is no visible edge where it starts
                             if (vignetteSteps) fall = Math.round(fall * vignetteSteps) / vignetteSteps;
-                            vignetteFall = fall;
+                            fades[fy * frame.width + fx] = fall;
                             const k = 1 - vignetteAmount * fall;
                             r *= k;
                             g *= k;
                             b *= k;
                         }
-                        if (palette) {
-                            // the sky gets the most dither; a smoothed vignette is dithered too, everywhere it
-                            // reaches, so its fade doesn't turn back into rings when the colours are snapped
-                            const weight = Math.max(kindWeight[kinds[i]], smoothing > 0.3 ? Math.min(1, vignetteFall * 2) * smoothing * 0.8 : 0) * strength;
-                            if (ditherMode !== "none" && weight > 0) {
-                                const px = coarse ? fx >> 1 : fx,
-                                    py = coarse ? fy >> 1 : fy;
-                                const t = ditherMode === "ordered" ? (BAYER_4[(py & 3) * 4 + (px & 3)] + 0.5) / 16 - 0.5 : (px + py) & 1 ? 0.25 : -0.25;
-                                const offset = t * 34 * weight;
-                                r += offset;
-                                g += offset;
-                                b += offset;
+                        const q = (fy * frame.width + fx) * 3;
+                        colours[q] = r;
+                        colours[q + 1] = g;
+                        colours[q + 2] = b;
+                    }
+                // the sky and hills are drawn with a fine grain; on its own that's lovely, but snapped to a
+                // few colours it turns into speckle. Before snapping, smooth it away (only between cells of
+                // the same kind and nearly the same colour, so ridges and the moon keep their edges) and the
+                // dither comes out as clean bands that follow the light instead
+                if (paletteMode !== "none") {
+                    const smoothed = new Float32Array(colours);
+                    for (let fy = 0; fy < frame.height; fy++)
+                        for (let fx = 0; fx < frame.width; fx++) {
+                            const kind = kinds[(frame.y + fy) * GRID_WIDTH + frame.x + fx];
+                            if (kind !== EXPORT_KIND.SKY && kind !== EXPORT_KIND.HILLS) continue;
+                            const reachX = kind === EXPORT_KIND.SKY ? 5 : 3,
+                                reachY = kind === EXPORT_KIND.SKY ? 1 : 0;
+                            const q = (fy * frame.width + fx) * 3;
+                            let n = 0, r = 0, g = 0, b = 0;
+                            for (let dy = -reachY; dy <= reachY; dy++) {
+                                const y = fy + dy;
+                                if (y < 0 || y >= frame.height) continue;
+                                for (let dx = -reachX; dx <= reachX; dx++) {
+                                    const x = fx + dx;
+                                    if (x < 0 || x >= frame.width || kinds[(frame.y + y) * GRID_WIDTH + frame.x + x] !== kind) continue;
+                                    const o = (y * frame.width + x) * 3;
+                                    if (Math.abs(colours[o] - colours[q]) + Math.abs(colours[o + 1] - colours[q + 1]) + Math.abs(colours[o + 2] - colours[q + 2]) > 30) continue;
+                                    n++, (r += colours[o]), (g += colours[o + 1]), (b += colours[o + 2]);
+                                }
                             }
-                            const c = nearest(clamp(Math.round(r), 0, 255), clamp(Math.round(g), 0, 255), clamp(Math.round(b), 0, 255));
+                            smoothed[q] = r / n;
+                            smoothed[q + 1] = g / n;
+                            smoothed[q + 2] = b / n;
+                        }
+                    colours.set(smoothed);
+                }
+                // the palettes: the season's for plants, soil and insects; "+ this sky" gives the sky its
+                // own colours taken from the frame (and lets the hazy hills borrow them too)
+                let skyQuantizer = null, hillQuantizer = null, detailQuantizer = null;
+                if (paletteMode !== "none") {
+                    const extras = paletteMode === "seasonFrame" ? framePaletteExtras(pixels, frame, look.palette) : [];
+                    const detailPalette = [...look.palette, ...extras];
+                    detailQuantizer = pairQuantizer(detailPalette);
+                    if (paletteMode === "seasonFrame") {
+                        const skyPalette = skyPaletteOfFrame(colours, kinds, frame, 14);
+                        skyQuantizer = skyPalette.length ? pairQuantizer(skyPalette) : detailQuantizer;
+                        hillQuantizer = pairQuantizer([...detailPalette, ...skyPalette]);
+                    } else skyQuantizer = hillQuantizer = detailQuantizer;
+                }
+                // pass 2: snap to the palette, laying out each pair of colours in the dither pattern
+                for (let fy = 0; fy < frame.height; fy++)
+                    for (let fx = 0; fx < frame.width; fx++) {
+                        const i = (frame.y + fy) * GRID_WIDTH + frame.x + fx;
+                        const q = (fy * frame.width + fx) * 3;
+                        let r = clamp(Math.round(colours[q]), 0, 255),
+                            g = clamp(Math.round(colours[q + 1]), 0, 255),
+                            b = clamp(Math.round(colours[q + 2]), 0, 255);
+                        if (detailQuantizer) {
+                            const kind = kinds[i];
+                            const pick = (kind === EXPORT_KIND.SKY ? skyQuantizer : kind === EXPORT_KIND.DETAIL ? detailQuantizer : hillQuantizer)(r, g, b);
+                            // how much of the in-between the pattern may show: none snaps to the nearer
+                            // colour, full gives a smooth mix; a smoothed vignette is dithered wherever it reaches
+                            const fall = fades[fy * frame.width + fx];
+                            const weight = ditherMode === "none" ? 0 : Math.min(1, Math.max(kindWeight[kind], smoothing > 0.3 ? Math.min(1, fall * 2) * smoothing * 0.8 : 0) * strength * 1.6);
+                            let t = pick.t;
+                            t = weight > 0.01 ? clamp(0.5 + (t - 0.5) / weight, 0, 1) : t < 0.5 ? 0 : 1;
+                            const px = coarse ? fx >> 1 : fx,
+                                py = coarse ? fy >> 1 : fy;
+                            const threshold = ditherMode === "ordered" ? (BAYER_4[(py & 3) * 4 + (px & 3)] + 0.5) / 16 : (px + py) & 1 ? 0.75 : 0.25;
+                            const c = t > threshold ? pick.b : pick.a;
                             r = c[0];
                             g = c[1];
                             b = c[2];
                         }
                         const p = (fy * frame.width + fx) * 4;
-                        data[p] = clamp(Math.round(r), 0, 255);
-                        data[p + 1] = clamp(Math.round(g), 0, 255);
-                        data[p + 2] = clamp(Math.round(b), 0, 255);
+                        data[p] = r;
+                        data[p + 1] = g;
+                        data[p + 2] = b;
                         data[p + 3] = 255;
                     }
                 return { image: out, frame };
@@ -9704,7 +10768,26 @@
                     const ant = describeAnt(antCellGrid[i], i);
                     if (ant) return ant;
                 }
+                if (m === GRAVEL && rockTone[i] >= 16) {
+                    const tone = ROCK_TONES[rockTone[i]];
+                    return { title: tone.name, lines: [tone.note, `moisture ${percent(moistureGrid[i])}`] };
+                }
+                if (m === STONE) {
+                    const tone = ROCK_TONES[rockTone[i]];
+                    return { title: tone.name, lines: [tone.note ?? (worldGeology === "chalk" ? "bedrock: the chalk of the Downs" : "bedrock: the sandstones and clays of the Weald")] };
+                }
+                if (m === AQUIFER) {
+                    return { title: aquiferWet[i] ? "Water pocket" : "Water pocket (drained)", lines: [aquiferWet[i] ? "water held in gravel in the rock; refills in wet seasons" : "above the pocket's water line; it fills again in wet weather", `moisture ${Math.round((moistureGrid[i] / AQUIFER_CAPACITY) * 100)}%`] };
+                }
+                if (m === AIR && bracketGrid[i]) {
+                    const kind = ROT_FUNGI[(bracketGrid[i] - 1) >> 2];
+                    return { title: kind.name, lines: [kind.note] };
+                }
                 const owner = plantIdGrid[i] ? plantsById.get(plantIdGrid[i]) : null;
+                if (owner && m === WOOD && rotGrid[i] && owner.rot) {
+                    const info = describePlant(owner, "Rotting wood");
+                    return { ...info, lines: [...info.lines, `being rotted by ${ROT_FUNGI[owner.rot.kind].name.toLowerCase()}`], plant: owner };
+                }
                 if (owner && (m === WOOD || m === LEAF || m === RHIZOME)) {
                     const part = m === LEAF ? (owner.form === PlantForm.FERN ? "Frond" : "Leaves") : m === RHIZOME ? "Rhizome" : owner.form === PlantForm.FERN ? "Stem" : "Wood";
                     return { ...describePlant(owner, part), plant: owner };
@@ -9862,6 +10945,56 @@
                 lensContext.strokeStyle = "rgba(255, 214, 40, 0.95)";
                 lensContext.lineWidth = 1;
                 lensContext.strokeRect((cx - sx) * scale + 0.5, (cy - sy) * scale + 0.5, scale - 1, scale - 1);
+            }
+            // ---------------------------------------------------------------------------------
+            // View zoom: the wheel over the world zooms the view about the pointer, from the whole
+            // world in frame (fit to the width) up to a close look; the scrollbars pan. With the
+            // magnifier on, the wheel zooms the lens instead.
+            // ---------------------------------------------------------------------------------
+            const VIEW_ZOOM_MAX = 4.5,
+                VIEW_ZOOM_START = 1.5;
+            let viewZoom = VIEW_ZOOM_START;
+            function layoutViewZoom(scroller) {
+                // the canvas is viewZoom times the view's width; the view is a 4:1 strip, or shorter
+                // when the whole world fits in less than that
+                const width = scroller.clientWidth;
+                const canvasWidth = width * viewZoom,
+                    canvasHeight = (canvasWidth * GRID_HEIGHT) / GRID_WIDTH;
+                canvas.style.width = `${canvasWidth}px`;
+                scroller.style.aspectRatio = "auto";
+                scroller.style.height = `${Math.round(Math.min(width / 4, canvasHeight)) + (viewZoom > 1.001 ? scroller.offsetHeight - scroller.clientHeight : 0)}px`;
+            }
+            function setViewZoom(scroller, zoom, clientX, clientY) {
+                zoom = clamp(zoom, 1, VIEW_ZOOM_MAX);
+                if (Math.abs(zoom - viewZoom) < 1e-4) return;
+                // keep the cell under the pointer where it is
+                const box = canvas.getBoundingClientRect(),
+                    outer = scroller.getBoundingClientRect();
+                const fx = (clientX - box.left) / box.width,
+                    fy = (clientY - box.top) / box.height;
+                viewZoom = zoom;
+                layoutViewZoom(scroller);
+                const newWidth = scroller.clientWidth * viewZoom,
+                    newHeight = (newWidth * GRID_HEIGHT) / GRID_WIDTH;
+                scroller.scrollLeft = fx * newWidth - (clientX - outer.left);
+                scroller.scrollTop = fy * newHeight - (clientY - outer.top);
+                if (magnifierOn) drawLens();
+            }
+            function setupViewZoom(scroller) {
+                layoutViewZoom(scroller);
+                new ResizeObserver(() => layoutViewZoom(scroller)).observe(scroller.parentElement);
+                scroller.addEventListener(
+                    "wheel",
+                    (e) => {
+                        if (magnifierOn || e.target !== canvas) return;
+                        // a sideways trackpad swipe still pans
+                        if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+                        e.preventDefault();
+                        const delta = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+                        setViewZoom(scroller, viewZoom * Math.exp(-clamp(delta, -120, 120) * 0.0018), e.clientX, e.clientY);
+                    },
+                    { passive: false },
+                );
             }
             canvas.addEventListener(
                 "wheel",
@@ -10067,10 +11200,10 @@
                     const swell = backdropNoise(backdropRng, layer.swellWave, 2, false);
                     const tops = new Float32Array(GRID_WIDTH);
                     for (let x = 0; x < GRID_WIDTH; x++)
-                        tops[x] = (layer.base - noise[x] * layer.amplitude - swell[x] * 2 * layer.swell) * H;
+                        tops[x] = (layer.base - noise[x] * layer.amplitude - swell[x] * 2 * layer.swell) * SCENE_HEIGHT + SCENE_TOP;
                     // snowReach: how high up the layer the year-round snow line sits (the mid hills' is above
                     // most of them, so they only whiten in a hard winter)
-                    return { ...layer, tops, snowLine: (layer.base - layer.amplitude * (layer.snowReach ?? 0.55)) * H };
+                    return { ...layer, tops, snowLine: (layer.base - layer.amplitude * (layer.snowReach ?? 0.55)) * SCENE_HEIGHT + SCENE_TOP };
                 });
                 for (let y = 0; y < H; y++) {
                     const skyT = Math.pow(y / H, 0.8);
@@ -10083,7 +11216,7 @@
                         for (const layer of layers) {
                             if (y < layer.tops[x]) continue;
                             isSky = false;
-                            const depthBelowRidge = (y - layer.tops[x]) / H;
+                            const depthBelowRidge = (y - layer.tops[x]) / SCENE_HEIGHT;
                             // atmospheric haze: lighter toward the horizon and lower in each layer
                             const haze = clamp(layer.haze + depthBelowRidge * 0.9, 0, 0.85);
                             colour = layer.colour.map((v, c) => mix(v, skyHorizon[c], haze));
@@ -10119,11 +11252,11 @@
                 // The sky turns around a celestial pole below the horizon, so stars arc up on the left,
                 // over the top and down on the right, the same way the sun and moon travel.
                 // Far below the screen, so the visible arcs are long and gentle rather than an obvious wheel.
-                return { x: GRID_WIDTH * 0.5, y: GRID_HEIGHT * STAR_POLE_DEPTH };
+                return { x: GRID_WIDTH * 0.5, y: SCENE_TOP + SCENE_HEIGHT * STAR_POLE_DEPTH };
             }
             function generateStars(backdropRng) {
                 const pole = starPole();
-                const minRadius = pole.y - GRID_HEIGHT * 0.68;
+                const minRadius = pole.y - SCENE_TOP - SCENE_HEIGHT * 0.68;
                 const maxRadius = Math.hypot(GRID_WIDTH * 0.5, pole.y) + 2;
                 const count = Math.round(
                     Math.PI * (maxRadius * maxRadius - minRadius * minRadius) * STAR_DENSITY,
@@ -10168,7 +11301,7 @@
                     const y = Math.round(pole.y + Math.sin(angle) * star.radius);
                     if (!isInsideGrid(x, y)) continue;
                     const i = getCellIndex(x, y);
-                    if (!backdropSky[i] || materialGrid[i] !== AIR || moonMask[i]) continue; // hidden behind the moon
+                    if (!backdropSky[i] || materialGrid[i] !== AIR || moonMask[i] || (i < cloudRows * GRID_WIDTH && cloudAlpha[i] > 0.3)) continue; // hidden behind the moon or cloud
                     const twinkle = 0.72 + 0.28 * Math.sin(tick * star.twinkleRate + star.twinklePhase);
                     const value = star.brightness * twinkle * visibility;
                     const p = i * 4;
@@ -10180,7 +11313,7 @@
                         for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
                             if (!isInsideGrid(x + dx, y + dy)) continue;
                             const j = getCellIndex(x + dx, y + dy);
-                            if (!backdropSky[j] || materialGrid[j] !== AIR || moonMask[j]) continue;
+                            if (!backdropSky[j] || materialGrid[j] !== AIR || moonMask[j] || (j < cloudRows * GRID_WIDTH && cloudAlpha[j] > 0.3)) continue;
                             const q = j * 4;
                             data[q] = Math.min(255, data[q] + value * 0.3);
                             data[q + 1] = Math.min(255, data[q + 1] + value * 0.3);
@@ -10191,6 +11324,9 @@
             }
             function resetSimulation(seed = (Math.random() * 2 ** 32) >>> 0) {
                 worldSeed = seed;
+                cloudsReady = false; // a new sky once the land is made
+                moistureUpdates = 0; // (the water table's step pattern starts afresh with each world)
+                aquiferPockets = null; // and the rock's water pockets are found afresh
                 climateStartIndex =
                     typeof climateYearOverride === "number"
                         ? climateYearOverride - CLIMATE_FIRST_YEAR
@@ -10210,6 +11346,8 @@
                     mushroomStyleGrid,
                     seedIdGrid,
                     lastUpdatedTick,
+                    rotGrid, // (without these, a new world inherited the last one's fungus brackets,
+                    bracketGrid, // left hanging in its air)
                 ])
                     grid.fill(0);
                 plants = [];
@@ -10326,11 +11464,11 @@
                 // it); a different seed starts with the usual mixed planting
                 if (planting === undefined) planting = text === worldSeedText ? worldPlanting : "mixed";
                 worldPlanting = PLANTINGS[planting] ? planting : "mixed";
-                if (!text) text = String((Math.random() * 2 ** 32) >>> 0);
+                if (!text) text = String(100000000 + Math.floor(Math.random() * 900000000));
                 // "seed@1816" in the box picks the year too
                 const yearMatch = text.match(/^(.*?)\s*@(\d{4})$/);
                 if (yearMatch) {
-                    text = yearMatch[1] || String((Math.random() * 2 ** 32) >>> 0);
+                    text = yearMatch[1] || String(100000000 + Math.floor(Math.random() * 900000000));
                     year = Number(yearMatch[2]);
                     yearSelect.value = yearMenuValue(year);
                 }
@@ -10362,9 +11500,9 @@
                 { label: "Oak wood with bluebells", seed: "Bluebell Wood", planting: "oakwood", note: "Oak and beech over carpets of bluebells" },
                 { label: "Pine heath", seed: "Hothfield Heath", planting: "pinewood", note: "Scots pine and birch over bracken" },
                 { label: "Fern glade", seed: "Fern Bottom", planting: "fernglade", note: "Damp, shady woodland where bracken and the other ferns do well" },
-                { label: "Flat lowland", seed: "Marlpit", note: "The flattest valley floor of the lot, with the usual mix of plants", land: (t) => t.range <= 20 },
-                { label: "Big hill", seed: "Box Hill", note: "One high hill in the middle of the valley, with the usual mix of plants", land: (t) => t.middle <= -18 && t.range >= 40 },
-                { label: "Deep valley", seed: "Darent Valley", note: "Steep sides down to a deep valley bottom, with the usual mix of plants", land: (t) => t.middle >= 20 && t.range >= 36 },
+                { label: "Flat lowland", seed: "Ravensden", note: "The flattest valley floor of the lot, with the usual mix of plants", land: (t) => t.range <= 22 },
+                { label: "Big hill", seed: "Fernhill", note: "One high hill in the middle of the valley, with the usual mix of plants", land: (t) => t.middle <= -18 && t.range >= 40 },
+                { label: "Deep valley", seed: "Hucking", note: "Steep sides down to a deep valley bottom, with the usual mix of plants", land: (t) => t.middle >= 20 && t.range >= 36 },
             ];
             function landShape(seedText) {
                 // the lie of the land a seed would grow, worked out without growing the world: the
@@ -10409,7 +11547,7 @@
             const placeSelect = document.querySelector("#placeSelect");
             function fillPlaceSelect() {
                 placeSelect.innerHTML =
-                    `<option value="">Places…</option>` +
+                    `<option value="">Places…</option><option value="random" title="Somewhere new: a random nine-digit seed">Random</option>` +
                     PLACES.map((place, k) => `<option value="${k}" title="${escapeHtml(place.note)}">${escapeHtml(place.label)}</option>`).join("");
             }
             function syncPlaceSelect() {
@@ -10421,6 +11559,12 @@
                 dice.title = k >= 0 ? `Another scene of this place (${PLACES[k].label.toLowerCase()})` : "Random seed";
             }
             placeSelect.onchange = () => {
+                if (placeSelect.value === "random") {
+                    // somewhere new: a nine-digit seed, keeping the year choice
+                    startWorld(String(100000000 + Math.floor(Math.random() * 900000000)));
+                    placeSelect.value = "";
+                    return;
+                }
                 const place = PLACES[Number(placeSelect.value)];
                 if (!place) return;
                 yearSelect.value = place.year ? yearMenuValue(place.year) : "seed";
@@ -10687,6 +11831,7 @@
             // variables that are replaced wholesale as the world runs: [get, set]
             const SAVED_VARIABLES = {
                 plants: [() => plants, (v) => (plants = v)],
+                moistureUpdates: [() => moistureUpdates, (v) => (moistureUpdates = v)],
                 simulationTick: [() => simulationTick, (v) => (simulationTick = v)],
                 nextPlantId: [() => nextPlantId, (v) => (nextPlantId = v)],
                 nextSeedId: [() => nextSeedId, (v) => (nextSeedId = v)],
@@ -10745,7 +11890,7 @@
                 plantsById, seeds, speciesRecords, speciesTimeline, latestSpeciesMetrics, weather, meddle, wind,
                 rainHistory, sporeBank, bluebells, bluebellEnergy, bluebellSurface, bluebellHeight, wormBodyGrid,
                 wormsById, antCellGrid, tunnelGrid, thatchOwnerGrid, antGround, antColoniesById, beeCellGrid,
-                beeNestGrid, beeColoniesById, wildflowerCell, wildflowerKind, wildflowerColumns, wildflowerPixels, wildflowerDrawn, swayShiftState, antPrey,
+                beeNestGrid, beeColoniesById, rotGrid, bracketGrid, wildflowerCell, wildflowerKind, wildflowerColumns, wildflowerPixels, wildflowerDrawn, swayShiftState, antPrey,
                 eventLog,
             };
             function bytesToBase64(bytes) {
@@ -10795,7 +11940,7 @@
                 const variables = {};
                 for (const [name, [get]] of Object.entries(SAVED_VARIABLES)) variables[name] = get();
                 const top = encode({ variables, containers: SAVED_CONTAINERS });
-                return { format: SAVE_FORMAT, saved: Date.now(), summary: worldSummary(), top, nodes };
+                return { format: SAVE_FORMAT, width: GRID_WIDTH, height: GRID_HEIGHT, saved: Date.now(), summary: worldSummary(), top, nodes };
             }
             function decodeWorld(data) {
                 const objects = data.nodes.map((node) => {
@@ -10869,6 +12014,8 @@
             }
             function loadWorldData(data) {
                 if (!data || data.format !== SAVE_FORMAT) throw new Error("not a saved world from this version");
+                if ((data.width ?? 792) !== GRID_WIDTH || (data.height ?? 198) !== GRID_HEIGHT)
+                    throw new Error("saved from an older, narrower valley");
                 const { variables, containers } = decodeWorld(data);
                 for (const [name, [, set]] of Object.entries(SAVED_VARIABLES)) if (name in variables) set(variables[name]);
                 for (const [name, target] of Object.entries(SAVED_CONTAINERS)) if (containers[name] !== undefined) restoreContainer(target, containers[name]);
@@ -10895,6 +12042,11 @@
                 updateClockReadout();
             }
             async function loadWorldBlob(blob) {
+                cloudsReady = false; // clouds aren't saved: the loaded world's sky fills in afresh
+                rotGrid.fill(0); // (saves from before the fungi have none: don't keep the last world's)
+                bracketGrid.fill(0);
+                aquiferPockets = null;
+                rockTonesFor = null;
                 loadWorldData(JSON.parse(await gunzip(blob)));
             }
             // the browser's own storage (IndexedDB: a whole world is too big for localStorage)
@@ -10960,7 +12112,7 @@
                     await loadWorldBlob(file);
                     saveStatus.textContent = `loaded ${file.name}`;
                 } catch (error) {
-                    saveStatus.textContent = "that file isn't a saved world";
+                    saveStatus.textContent = /narrower/.test(error.message) ? "that world was saved before the valley was widened" : "that file isn't a saved world";
                     console.warn(error);
                 }
             };
@@ -11030,6 +12182,16 @@
                 const linkYear = params.get("year") ? Number(params.get("year")) : undefined;
                 if (linkYear) yearSelect.value = yearMenuValue(linkYear);
                 startWorld(params.get("seed") ?? "12345", linkYear, params.get("planting") ?? "mixed");
+                // start the view in the middle of the valley
+                const worldScroll = document.querySelector("#worldScroll");
+                // and low enough that the ground sits near the bottom of the view, with the treetops above
+                // (scroll the wheel over the world to zoom: all the way out shows the whole of it)
+                setupViewZoom(worldScroll);
+                requestAnimationFrame(() => {
+                    worldScroll.scrollLeft = (worldScroll.scrollWidth - worldScroll.clientWidth) / 2;
+                    const groundShare = averageTerrainSurface / GRID_HEIGHT;
+                    worldScroll.scrollTop = Math.max(0, groundShare * worldScroll.scrollHeight - 0.82 * worldScroll.clientHeight);
+                });
                 logEvent("save", `A new world grew from the seed "${worldSeedText}"`);
                 // coming back to the same world: carry on from where it was left
                 readAutosave().then(async (saved) => {
