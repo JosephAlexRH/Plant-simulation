@@ -254,6 +254,10 @@
                 justify-content: center;
                 margin-left: 6px;
             }
+            .intro-button {
+                margin-left: 6px;
+                font-weight: bold;
+            }
             .magnifier-button.active {
                 background: #b4c6e7;
             }
@@ -493,6 +497,76 @@
                 font-size: 16px;
                 line-height: 1;
                 padding: 2px 8px;
+            }
+            .intro-box {
+                width: min(560px, calc(100vw - 32px));
+                max-height: calc(100vh - 32px);
+                overflow: auto;
+                box-sizing: border-box;
+                padding: 14px 18px 12px;
+                background: #f4f4f4;
+                border: 1px solid #7f7f7f;
+                box-shadow: 0 6px 30px rgba(0, 0, 0, 0.35);
+                font-size: 13px;
+                line-height: 1.5;
+            }
+            .intro-box h2 {
+                margin: 0 0 8px;
+                font-size: 17px;
+            }
+            .intro-box p {
+                margin: 0 0 8px;
+            }
+            .intro-box ul {
+                margin: 0 0 8px;
+                padding-left: 18px;
+            }
+            .intro-box li {
+                margin-bottom: 4px;
+            }
+            .intro-box kbd {
+                display: inline-block;
+                min-width: 1.2em;
+                padding: 0 4px;
+                font: 11px ui-monospace, monospace;
+                text-align: center;
+                background: #fff;
+                border: 1px solid #a6a6a6;
+            }
+            .intro-page[hidden] {
+                display: none;
+            }
+            .intro-nav {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                margin-top: 12px;
+                padding-top: 10px;
+                border-top: 1px solid #ccc;
+            }
+            .intro-dots {
+                display: flex;
+                gap: 5px;
+                margin-right: auto;
+            }
+            .intro-dots span {
+                width: 8px;
+                height: 8px;
+                background: #c4c4c4;
+            }
+            .intro-dots span.active {
+                background: #52616b;
+            }
+            .intro-nav .primary {
+                background: #b4c6e7;
+            }
+            .intro-nav .primary:hover {
+                background: #9fb6de;
+            }
+            .intro-skip {
+                margin-right: 4px;
+                color: #666;
+                font-size: 11px;
             }
             #exportPreview {
                 display: block;
@@ -904,6 +978,50 @@
                 </div>
             </div>
         </div>
+        <div id="introPanel" class="export-panel" hidden>
+            <div class="intro-box" role="dialog" aria-modal="true" aria-labelledby="introTitle">
+                <section class="intro-page">
+                    <h2 id="introTitle">Welcome to Evolving Plants</h2>
+                    <p>This is a living valley, simulated grain by grain. Soil, water, stone, snow and leaf litter are all made of pixels, and every plant growing in them carries its own genome.</p>
+                    <p>Nothing here is scripted. Plants that suit the light, water and soil where they land make seeds; their offspring inherit the genome with small mutations. Over the years new species split off, spread, and go extinct.</p>
+                    <p>Leave it running and see what evolves.</p>
+                </section>
+                <section class="intro-page" hidden>
+                    <h2>What you're watching</h2>
+                    <ul>
+                        <li><strong>Plants:</strong> trees, shrubs and ferns. A tree's shape grows from rules in its genome (an L-system), along with its roots, leaves, shade tolerance, flowers and seeds. Plants that are genetically close enough count as one species.</li>
+                        <li><strong>The ground:</strong> rain soaks in and drains away, fallen leaves rot into fertile soil, and fungi spread through it and fruit as mushrooms.</li>
+                        <li><strong>Insects:</strong> earthworms, ant colonies that lay scent trails, and bumblebees that pollinate flowers. They evolve too.</li>
+                        <li><strong>Weather:</strong> each simulated year replays a real year of English weather (Central England temperature and England &amp; Wales rainfall, 1766–2025), exaggerated so you can see the difference. Seasons, snow, droughts and floods follow from it.</li>
+                    </ul>
+                </section>
+                <section class="intro-page" hidden>
+                    <h2>Looking around</h2>
+                    <ul>
+                        <li><strong>Hover</strong> over the world to inspect anything; <strong>click a plant</strong> to follow its species.</li>
+                        <li>Scroll sideways along the valley; the mouse wheel zooms. <kbd>Z</kbd> toggles a magnifier.</li>
+                        <li><kbd>M</kbd> <kbd>L</kbd> <kbd>F</kbd> show moisture, light and fertility. Press the same key again to go back.</li>
+                        <li><kbd>Space</kbd> pauses. The <strong>1× 4× 16×</strong> buttons set the speed: evolution takes many generations, so speed it up.</li>
+                        <li>The panel below the world tracks it all: <strong>Overview</strong> charts populations, <strong>Family tree</strong> shows which species came from which, and <strong>Plant species</strong>, <strong>Insects</strong> and <strong>Events</strong> go into detail.</li>
+                    </ul>
+                </section>
+                <section class="intro-page" hidden>
+                    <h2>Make it your own</h2>
+                    <ul>
+                        <li><strong>Seeds:</strong> type any word or number into the seed box and press <strong>Generate</strong>. The same seed always grows the same world, so you can share one. Pick a starting year, or try one of the curated <strong>Places</strong>.</li>
+                        <li><strong>Sandbox:</strong> send a storm, a drought or a cold snap, or draw soil, water, stone and seeds straight onto the world.</li>
+                        <li><strong>Keep it:</strong> the world saves itself in this browser. <strong>Save</strong> writes it to a file, <strong>CSV</strong>/<strong>JSON</strong> export the species data, and <strong>Picture</strong> takes a screenshot.</li>
+                    </ul>
+                    <p>You can open this introduction again with the <strong>?</strong> button at the top of the panel.</p>
+                </section>
+                <div class="intro-nav">
+                    <div id="introDots" class="intro-dots" aria-hidden="true"></div>
+                    <button id="introSkip" type="button" class="intro-skip">Skip</button>
+                    <button id="introBack" type="button">Back</button>
+                    <button id="introNext" type="button" class="primary">Next</button>
+                </div>
+            </div>
+        </div>
         <main>
             <section class="simulation-view">
                 <div class="canvas-wrap">
@@ -949,6 +1067,7 @@
                         <button id="randomTerrain" type="button" class="dice" title="Random seed">⚄</button>
                         <button id="generateTerrain" type="button" title="Grow the world from this seed and year">Generate</button>
                     </span>
+                    <button id="introButton" type="button" class="intro-button" title="Introduction to the simulation">?</button>
                     <button id="togglePanel" type="button" aria-expanded="true">Hide panel</button>
                 </div>
                 <div id="panelContent" class="panel-content">
@@ -11092,6 +11211,7 @@
             exportJpegButton.onclick = openExportPanel;
             onkeydown = (e) => {
                 if (e.target instanceof HTMLInputElement) return; // typing a seed
+                if (!introPanel.hidden) return; // the introduction handles its own keys
                 const views = { m: "moisture", l: "light", f: "fertility" };
                 const view = views[e.key.toLowerCase()];
                 if (view && !e.repeat) {
@@ -11124,12 +11244,69 @@
                 };
             document.addEventListener("keydown", (event) => {
                 // Space pauses and resumes, unless you're typing in a box
-                if (event.code !== "Space" || event.repeat || !exportPanel.hidden) return;
+                if (event.code !== "Space" || event.repeat || !exportPanel.hidden || !introPanel.hidden) return;
                 const target = event.target;
                 if (target.closest?.("input, textarea, select, button, [contenteditable]")) return;
                 event.preventDefault();
                 setPaused(!simulationPaused);
             });
+            // The introduction: a few pages shown on a first visit, and again from the ? button.
+            // The world holds still while it's open.
+            const INTRO_SEEN_KEY = "evolvingPlants.introSeen";
+            const introPanel = document.querySelector("#introPanel"),
+                introPages = [...introPanel.querySelectorAll(".intro-page")],
+                introDots = document.querySelector("#introDots"),
+                introBack = document.querySelector("#introBack"),
+                introNext = document.querySelector("#introNext");
+            let introPage = 0,
+                introWasPaused = false;
+            for (let i = 0; i < introPages.length; i++) introDots.append(document.createElement("span"));
+            function showIntroPage(index) {
+                introPage = Math.max(0, Math.min(introPages.length - 1, index));
+                introPages.forEach((page, i) => (page.hidden = i !== introPage));
+                [...introDots.children].forEach((dot, i) => dot.classList.toggle("active", i === introPage));
+                introBack.disabled = introPage === 0;
+                introNext.textContent = introPage === introPages.length - 1 ? "Start exploring" : "Next";
+            }
+            function openIntro() {
+                if (!introPanel.hidden) return;
+                if (!exportPanel.hidden) closeExportPanel();
+                introWasPaused = simulationPaused;
+                setPaused(true);
+                showIntroPage(0);
+                introPanel.hidden = false;
+                introNext.focus();
+            }
+            function closeIntro() {
+                introPanel.hidden = true;
+                try {
+                    localStorage.setItem(INTRO_SEEN_KEY, "1");
+                } catch {
+                    // storage blocked: it will just show again next time
+                }
+                if (!introWasPaused) setPaused(false);
+            }
+            introBack.onclick = () => showIntroPage(introPage - 1);
+            introNext.onclick = () => (introPage === introPages.length - 1 ? closeIntro() : showIntroPage(introPage + 1));
+            document.querySelector("#introSkip").onclick = closeIntro;
+            document.querySelector("#introButton").onclick = openIntro;
+            introPanel.addEventListener("click", (event) => {
+                if (event.target === introPanel) closeIntro(); // click outside the box
+            });
+            introPanel.addEventListener("keydown", (event) => {
+                if (event.key === "Escape") closeIntro();
+                else if (event.key === "ArrowRight") showIntroPage(introPage + 1);
+                else if (event.key === "ArrowLeft") showIntroPage(introPage - 1);
+                else return;
+                event.preventDefault();
+            });
+            let introSeen = false;
+            try {
+                introSeen = localStorage.getItem(INTRO_SEEN_KEY) === "1";
+            } catch {
+                // storage blocked: treat as a first visit
+            }
+            if (!introSeen) openIntro();
             let lastClockUpdate = 0;
             function runNextFrame(now) {
                 accumulator += Math.min(now - last, 250);
