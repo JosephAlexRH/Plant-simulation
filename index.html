@@ -83,9 +83,10 @@
             }
             .panel-topbar {
                 display: flex;
+                flex-wrap: wrap;
                 align-items: center;
                 justify-content: space-between;
-                gap: 8px;
+                gap: 4px 8px;
                 min-height: 30px;
                 padding: 3px 6px;
                 background: #d9e1f2;
@@ -108,22 +109,6 @@
                 font-size: 10px;
                 color: #68757d;
                 white-space: nowrap;
-            }
-            .seed-control {
-                display: flex;
-                align-items: center;
-            }
-            #placeSelect {
-                font-size: 12px;
-                padding: 3px 4px;
-                margin-right: 6px;
-                max-width: 150px;
-            }
-            #yearSelect {
-                font-size: 12px;
-                padding: 3px 4px;
-                margin-right: 6px;
-                max-width: 210px;
             }
             .dice {
                 padding: 1px 7px;
@@ -247,6 +232,237 @@
             .speed-control {
                 display: flex;
                 margin-left: auto;
+            }
+            .view-control {
+                display: flex;
+            }
+            .view-control button + button {
+                border-left: 0;
+            }
+            .view-control button.active {
+                background: #b4c6e7;
+                font-weight: 600;
+            }
+            .menu-button[aria-expanded="true"] {
+                background: #b4c6e7;
+            }
+            .dropdown {
+                position: fixed; /* placed under its button when opened; fixed so the panel can't clip it */
+                z-index: 30;
+                background: #f4f4f4;
+                border: 1px solid #7f7f7f;
+                box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+            }
+            .dropdown[hidden] {
+                display: none;
+            }
+            .world-menu {
+                width: 300px;
+                padding: 10px 12px;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+            .world-menu strong {
+                font-size: 13px;
+            }
+            .world-menu label {
+                display: flex;
+                flex-direction: column;
+                gap: 3px;
+            }
+            .world-menu select {
+                font-size: 12px;
+                padding: 3px 4px;
+            }
+            .seed-row {
+                display: flex;
+            }
+            .seed-row #seedInput {
+                flex: 1;
+                min-width: 0;
+                width: auto;
+            }
+            .world-menu-note {
+                color: #595959;
+                font-size: 11px;
+            }
+            #generateTerrain {
+                align-self: flex-end;
+                background: #b4c6e7;
+                padding: 4px 12px;
+            }
+            .file-menu {
+                width: 200px;
+                display: flex;
+                flex-direction: column;
+                padding: 3px 0;
+                background: #fff;
+            }
+            .file-menu button {
+                border: 0;
+                background: transparent;
+                text-align: left;
+                padding: 6px 12px;
+            }
+            .file-menu button:hover {
+                background: #d9e1f2;
+            }
+            .file-menu hr {
+                width: 100%;
+                margin: 3px 0;
+                border: 0;
+                border-top: 1px solid #d0d0d0;
+            }
+            .chart-menu {
+                display: grid;
+                grid-template-columns: repeat(4, max-content);
+                gap: 4px 20px;
+                padding: 8px 10px;
+                background: #fff;
+            }
+            .chart-menu fieldset {
+                display: flex;
+                flex-direction: column;
+                gap: 3px;
+                margin: 0;
+                padding: 0;
+                border: 0;
+            }
+            .chart-menu legend {
+                padding: 0 0 3px;
+                font-size: 11px;
+                font-weight: 600;
+                color: #595959;
+            }
+            .chart-menu label {
+                font-size: 11px;
+                white-space: nowrap;
+            }
+            .active-lines {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 2px 10px;
+                margin-right: auto;
+                font-size: 11px;
+                color: #333;
+            }
+            #linesButton {
+                font-size: 11px;
+                padding: 3px 8px;
+            }
+            .stat-card span[title] {
+                cursor: help;
+                text-decoration: underline dotted #a6a6a6;
+                text-underline-offset: 2px;
+            }
+            .guide {
+                display: flex;
+                height: 560px;
+                border: 1px solid #a6a6a6;
+                background: #fff;
+            }
+            .guide-index {
+                flex: none;
+                width: 230px;
+                display: flex;
+                flex-direction: column;
+                border-right: 1px solid #a6a6a6;
+                background: #f2f2f2;
+            }
+            .guide-search {
+                padding: 6px;
+                border-bottom: 1px solid #a6a6a6;
+            }
+            #guideSearch {
+                box-sizing: border-box;
+                width: 100%;
+                font: inherit;
+                padding: 4px 6px;
+                border: 1px solid #a6a6a6;
+            }
+            #guideToc {
+                flex: 1;
+                overflow-y: auto;
+                padding: 4px 0 8px;
+            }
+            #guideToc button {
+                display: block;
+                width: 100%;
+                border: 0;
+                background: transparent;
+                text-align: left;
+                padding: 3px 10px 3px 26px;
+                color: #333;
+            }
+            #guideToc button:hover {
+                background: #d9e1f2;
+            }
+            #guideToc .guide-chapter {
+                padding: 7px 10px 3px;
+                font-weight: bold;
+                color: #222;
+            }
+            #guideToc button[aria-current="true"] {
+                background: #d9e1f2;
+                box-shadow: inset 3px 0 0 #4472c4;
+            }
+            .guide-empty {
+                padding: 8px 10px;
+                color: #595959;
+            }
+            #guideArticle {
+                flex: 1;
+                min-width: 0;
+                overflow-y: auto;
+                padding: 14px 22px 18px;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            .guide-crumb {
+                font-size: 11px;
+                color: #595959;
+            }
+            #guideArticle h3 {
+                font-size: 16px;
+            }
+            #guideArticle p {
+                max-width: 680px;
+                margin: 0;
+                font-size: 13px;
+                line-height: 1.55;
+            }
+            .guide-world {
+                max-width: 680px;
+                padding: 6px 8px;
+                background: #f2f2f2;
+                border: 1px solid #d0d0d0;
+            }
+            .guide-see {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 4px 12px;
+                align-items: center;
+                color: #595959;
+            }
+            .guide-see button {
+                border: 0;
+                background: transparent;
+                padding: 0;
+                color: #2f5597;
+                text-decoration: underline;
+            }
+            .guide-pager {
+                display: flex;
+                justify-content: space-between;
+                gap: 8px;
+                margin-top: auto;
+                padding-top: 10px;
+                border-top: 1px solid #d0d0d0;
+            }
+            .guide-pager button:disabled {
+                visibility: hidden;
             }
             .magnifier-button {
                 display: inline-flex;
@@ -915,6 +1131,16 @@
                     width: 100%;
                     margin: 0 0 5px;
                 }
+                .guide {
+                    flex-direction: column;
+                    height: auto;
+                }
+                .guide-index {
+                    width: auto;
+                    max-height: 220px;
+                    border-right: 0;
+                    border-bottom: 1px solid #a6a6a6;
+                }
                 #populationChart {
                     height: 170px;
                 }
@@ -1000,7 +1226,7 @@
                     <ul>
                         <li><strong>Hover</strong> over the world to inspect anything; <strong>click a plant</strong> to follow its species.</li>
                         <li>Scroll sideways along the valley; the mouse wheel zooms. <kbd>Z</kbd> toggles a magnifier.</li>
-                        <li><kbd>M</kbd> <kbd>L</kbd> <kbd>F</kbd> show moisture, light and fertility. Press the same key again to go back.</li>
+                        <li>The <strong>View</strong> buttons (or <kbd>M</kbd> <kbd>L</kbd> <kbd>F</kbd>) show moisture, light and fertility.</li>
                         <li><kbd>Space</kbd> pauses. The <strong>1× 4× 16×</strong> buttons set the speed: evolution takes many generations, so speed it up.</li>
                         <li>The panel below the world tracks it all: <strong>Overview</strong> charts populations, <strong>Family tree</strong> shows which species came from which, and <strong>Plant species</strong>, <strong>Insects</strong> and <strong>Events</strong> go into detail.</li>
                     </ul>
@@ -1008,11 +1234,11 @@
                 <section class="intro-page" hidden>
                     <h2>Make it your own</h2>
                     <ul>
-                        <li><strong>Seeds:</strong> type any word or number into the seed box and press <strong>Generate</strong>. The same seed always grows the same world, so you can share one. Pick a starting year, or try one of the curated <strong>Places</strong>.</li>
+                        <li><strong>New worlds:</strong> the <strong>World</strong> menu takes any word or number as a seed. The same seed always grows the same world, so you can share one. Pick a starting year, or try one of the curated <strong>Places</strong>.</li>
                         <li><strong>Sandbox:</strong> send a storm, a drought or a cold snap, or draw soil, water, stone and seeds straight onto the world.</li>
-                        <li><strong>Keep it:</strong> the world saves itself in this browser. <strong>Save</strong> writes it to a file, <strong>CSV</strong>/<strong>JSON</strong> export the species data, and <strong>Picture</strong> takes a screenshot.</li>
+                        <li><strong>Keep it:</strong> the world saves itself in this browser. The <strong>File</strong> menu saves it to a file, exports the species data, or takes a picture.</li>
                     </ul>
-                    <p>You can open this introduction again with the <strong>?</strong> button at the top of the panel.</p>
+                    <p>For how any part of it works, see the <strong>Field guide</strong> tab. You can open this introduction again with the <strong>?</strong> button at the top of the panel.</p>
                 </section>
                 <div class="intro-nav">
                     <div id="introDots" class="intro-dots" aria-hidden="true"></div>
@@ -1046,11 +1272,23 @@
                     <button type="button" id="magnifierButton" class="magnifier-button" title="Magnifier (Z) · scroll to zoom in and out" aria-pressed="false">
                         <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="6.5" cy="6.5" r="4.5" fill="none" stroke="currentColor" stroke-width="1.8" /><line x1="10" y1="10" x2="14.5" y2="14.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
                     </button>
-                    <span class="seed-control">
-                        <select id="placeSelect" title="Curated places: a seed, a year and how the valley is planted to start with">
-                            <option value="">Places…</option>
-                        </select>
-                        <select id="yearSelect" title="When in the weather record the world starts">
+                    <div class="view-control" role="group" aria-label="View">
+                        <button type="button" data-view="" class="active" aria-pressed="true">World</button>
+                        <button type="button" data-view="moisture" aria-pressed="false" title="Water in the soil (M)">Moisture</button>
+                        <button type="button" data-view="light" aria-pressed="false" title="Sunlight reaching each cell (L)">Light</button>
+                        <button type="button" data-view="fertility" aria-pressed="false" title="Nutrients in the soil (F)">Fertility</button>
+                    </div>
+                    <button id="worldMenuButton" type="button" class="menu-button" aria-haspopup="true" aria-expanded="false" aria-controls="worldMenu" title="Seed, starting year and places">World ▾</button>
+                    <div id="worldMenu" class="dropdown world-menu" role="dialog" aria-label="Grow a world" hidden>
+                        <strong>Grow a world</strong>
+                        <label>Seed
+                            <span class="seed-row">
+                                <input id="seedInput" type="text" spellcheck="false" maxlength="200" placeholder="seed: any text or number" title="World seed: the terrain and the opening plants. The same text always grows the same world, so a word or a message works as a shareable world." />
+                                <button id="randomTerrain" type="button" class="dice" title="Random seed">⚄</button>
+                            </span>
+                        </label>
+                        <label>Start in
+                            <select id="yearSelect" title="When in the weather record the world starts">
                             <option value="seed" selected>The seed's own year</option>
                             <option value="random">A random year</option>
                             <option value="present" id="presentDayOption">Present day*</option>
@@ -1063,10 +1301,15 @@
                             <option value="2000">2000 · autumn floods</option>
                             <option value="2012">2012 · a wet run of years</option>
                         </select>
-                        <input id="seedInput" type="text" spellcheck="false" maxlength="200" placeholder="seed: any text or number" title="World seed: the terrain and the opening plants. The same text always grows the same world, so a word or a message works as a shareable world." />
-                        <button id="randomTerrain" type="button" class="dice" title="Random seed">⚄</button>
+                        </label>
+                        <label>Place
+                            <select id="placeSelect" title="Curated places: a seed, a year and how the valley is planted to start with">
+                            <option value="">Places…</option>
+                        </select>
+                        </label>
+                        <span class="world-menu-note">The same seed always grows the same world, so a word works as a world you can share.</span>
                         <button id="generateTerrain" type="button" title="Grow the world from this seed and year">Generate</button>
-                    </span>
+                    </div>
                     <button id="introButton" type="button" class="intro-button" title="Introduction to the simulation">?</button>
                     <button id="togglePanel" type="button" aria-expanded="true">Hide panel</button>
                 </div>
@@ -1078,39 +1321,55 @@
                         <button class="tab-button" type="button" data-panel-tab="insects" aria-selected="false">Insects</button>
                         <button class="tab-button" type="button" data-panel-tab="events" aria-selected="false">Events</button>
                         <button class="tab-button" type="button" data-panel-tab="sandbox" aria-selected="false">Sandbox</button>
+                        <button class="tab-button" type="button" data-panel-tab="guide" aria-selected="false">Field guide</button>
                         <div class="export-buttons">
                             <span id="saveStatus" class="save-status"></span>
-                            <button id="saveWorld" type="button" title="Save this world to a file (it also saves itself in this browser every couple of minutes)">Save</button>
-                            <button id="loadWorld" type="button" title="Load a saved world file">Load</button>
+                            <button id="fileMenuButton" type="button" class="menu-button" aria-haspopup="true" aria-expanded="false" aria-controls="fileMenu">File ▾</button>
+                        </div>
+                        <div id="fileMenu" class="dropdown file-menu" role="menu" hidden>
+                            <button id="saveWorld" type="button" role="menuitem" title="It also saves itself in this browser every couple of minutes">Save world to a file</button>
+                            <button id="loadWorld" type="button" role="menuitem">Load a world file…</button>
                             <input id="loadWorldFile" type="file" accept=".world,application/gzip" hidden />
-                            <button id="exportCsv" type="button">CSV</button>
-                            <button id="exportJson" type="button">JSON</button>
-                            <button id="exportJpeg" type="button" title="Export a picture: frame it, give it an autumn finish, save a sharp PNG">Picture</button>
+                            <hr />
+                            <button id="exportJpeg" type="button" role="menuitem" title="Frame it, give it a seasonal finish, save a sharp PNG">Picture…</button>
+                            <button id="exportCsv" type="button" role="menuitem">Species data (CSV)</button>
+                            <button id="exportJson" type="button" role="menuitem">Species data (JSON)</button>
                         </div>
                     </nav>
                     <section class="tab-panel" data-panel-view="overview">
                         <div id="statsSummary"></div>
                         <div class="chart-toolbar">
                             <h4>Population timeline</h4>
-                            <div class="chart-options">
-                                <label><input id="showSpeciesLines" type="checkbox" checked /> species</label>
-                                <label><input id="showPropagules" type="checkbox" /> propagules</label>
-                                <label><input id="showExtinct" type="checkbox" checked /> extinct</label>
-                                <span class="chart-divider" aria-hidden="true"></span>
-                                <label><input data-total="plants" type="checkbox" checked /><i class="swatch" style="--swatch:#1f2a30"></i>all plants</label>
-                                <label><input data-total="tallTrees" type="checkbox" /><i class="swatch" style="--swatch:#8a5a2b"></i>trees</label>
-                                <label><input data-total="shrubs" type="checkbox" /><i class="swatch" style="--swatch:#9a9a1e"></i>shrubs</label>
-                                <label><input data-total="ferns" type="checkbox" /><i class="swatch" style="--swatch:#2e8b57"></i>ferns</label>
-                                <label><input data-total="livingSpecies" type="checkbox" /><i class="swatch" style="--swatch:#6c5ce7"></i>living species</label>
-                                <label><input data-total="biomass" type="checkbox" /><i class="swatch swatch-dashed" style="--swatch:#c0392b"></i>biomass (right axis)</label>
-                                <span class="chart-divider" aria-hidden="true"></span>
-                                <label><input data-total="temperature" type="checkbox" /><i class="swatch swatch-dotted" style="--swatch:#d35400"></i>temperature, yearly mean</label>
-                                <label><input data-total="rainfall" type="checkbox" /><i class="swatch swatch-dotted" style="--swatch:#2471a3"></i>rainfall, last 12 months</label>
-                                <span class="chart-divider" aria-hidden="true"></span>
-                                <label title="each insect line has its own scale, from zero"><input data-total="worms" type="checkbox" /><i class="swatch swatch-dashdot" style="--swatch:#b0706a"></i>earthworms</label>
-                                <label title="each insect line has its own scale, from zero"><input data-total="woodAnts" type="checkbox" /><i class="swatch swatch-dashdot" style="--swatch:#de2e1e"></i>red wood ants</label>
-                                <label title="each insect line has its own scale, from zero"><input data-total="gardenAnts" type="checkbox" /><i class="swatch swatch-dashdot" style="--swatch:#5d6163"></i>black garden ants</label>
-                                <label title="each insect line has its own scale, from zero (workers and queens)"><input data-total="bees" type="checkbox" /><i class="swatch swatch-dashdot" style="--swatch:#d9a400"></i>bumblebees</label>
+                            <span id="activeLines" class="active-lines"></span>
+                            <button id="linesButton" type="button" class="menu-button" aria-haspopup="true" aria-expanded="false" aria-controls="chartMenu">Lines ▾</button>
+                            <div id="chartMenu" class="dropdown chart-menu" hidden>
+                                <fieldset>
+                                    <legend>Plants</legend>
+                                    <label><input data-total="plants" type="checkbox" checked /><i class="swatch" style="--swatch:#1f2a30"></i>all plants</label>
+                                    <label><input data-total="tallTrees" type="checkbox" /><i class="swatch" style="--swatch:#8a5a2b"></i>trees</label>
+                                    <label><input data-total="shrubs" type="checkbox" /><i class="swatch" style="--swatch:#9a9a1e"></i>shrubs</label>
+                                    <label><input data-total="ferns" type="checkbox" /><i class="swatch" style="--swatch:#2e8b57"></i>ferns</label>
+                                    <label><input data-total="biomass" type="checkbox" /><i class="swatch swatch-dashed" style="--swatch:#c0392b"></i>biomass (right axis)</label>
+                                </fieldset>
+                                <fieldset>
+                                    <legend>Species</legend>
+                                    <label><input id="showSpeciesLines" type="checkbox" checked /> each species</label>
+                                    <label><input data-total="livingSpecies" type="checkbox" /><i class="swatch" style="--swatch:#6c5ce7"></i>living species</label>
+                                    <label><input id="showExtinct" type="checkbox" checked /> extinct</label>
+                                    <label><input id="showPropagules" type="checkbox" /> propagules</label>
+                                </fieldset>
+                                <fieldset>
+                                    <legend>Climate</legend>
+                                    <label><input data-total="temperature" type="checkbox" /><i class="swatch swatch-dotted" style="--swatch:#d35400"></i>temperature, yearly mean</label>
+                                    <label><input data-total="rainfall" type="checkbox" /><i class="swatch swatch-dotted" style="--swatch:#2471a3"></i>rainfall, last 12 months</label>
+                                </fieldset>
+                                <fieldset>
+                                    <legend>Insects</legend>
+                                    <label title="each insect line has its own scale, from zero"><input data-total="worms" type="checkbox" /><i class="swatch swatch-dashdot" style="--swatch:#b0706a"></i>earthworms</label>
+                                    <label title="each insect line has its own scale, from zero"><input data-total="woodAnts" type="checkbox" /><i class="swatch swatch-dashdot" style="--swatch:#de2e1e"></i>red wood ants</label>
+                                    <label title="each insect line has its own scale, from zero"><input data-total="gardenAnts" type="checkbox" /><i class="swatch swatch-dashdot" style="--swatch:#5d6163"></i>black garden ants</label>
+                                    <label title="each insect line has its own scale, from zero (workers and queens)"><input data-total="bees" type="checkbox" /><i class="swatch swatch-dashdot" style="--swatch:#d9a400"></i>bumblebees</label>
+                                </fieldset>
                             </div>
                         </div>
                         <canvas id="populationChart" width="1200" height="240"></canvas>
@@ -1192,6 +1451,15 @@
                             </span>
                             <label>Brush <input id="brushSize" type="range" min="1" max="8" value="3" /></label>
                             <span class="sandbox-hint">Seeds are of the species open in the Plant species tab (or a plain tree).</span>
+                        </div>
+                    </section>
+                    <section class="tab-panel" data-panel-view="guide" hidden>
+                        <div class="guide">
+                            <nav class="guide-index" aria-label="Field guide index">
+                                <div class="guide-search"><input id="guideSearch" type="search" placeholder="Search the guide" aria-label="Search the guide" /></div>
+                                <div id="guideToc"></div>
+                            </nav>
+                            <article id="guideArticle" aria-live="polite"></article>
                         </div>
                     </section>
                     <section class="tab-panel" data-panel-view="species" hidden>
@@ -3854,9 +4122,9 @@
                       ? `${hibernatingQueens.length} queens ${season.yearPhase < 0.4 || season.yearPhase > 0.66 ? "asleep in the soil" : "about"}`
                       : "none at the moment";
                 return [
-                    [`Earthworms: ${wormsById.size}`, wormsById.size ? `up to generation ${wormAverages().maxGeneration}` : "none left"],
-                    [`Ant colonies: ${antColonies.length}`, `${wood.length} red wood · ${garden.length} black garden · ${antWorkers} workers`],
-                    [`Bumblebee colonies: ${beeColonies.length}`, beeLine],
+                    [`Earthworms: ${wormsById.size}`, wormsById.size ? `up to generation ${wormAverages().maxGeneration}` : "none left", "Worms drag fallen litter underground and leave rich soil behind"],
+                    [`Ant colonies: ${antColonies.length}`, `${wood.length} red wood · ${garden.length} black garden · ${antWorkers} workers`, "Living ant colonies and their workers"],
+                    [`Bumblebee colonies: ${beeColonies.length}`, beeLine, "Bees carry pollen between flowers; flowering plants need it to set seed"],
                 ];
             }
             function wormCards() {
@@ -9545,17 +9813,17 @@
                         simulationTick - record.extinctTick < EVOLUTION_SAMPLE_INTERVAL,
                 ).length;
                 const cards = [
-                    [`World seed: ${escapeHtml(worldSeedText)}`, `weather from ${CLIMATE_FIRST_YEAR + climateStartIndex}${CLIMATE_FIRST_YEAR + climateStartIndex > CLIMATE_LAST_YEAR ? "*" : ""}`],
-                    [`Plants: ${livingPlants}`, `${livingSpecies} species · ${shrubCount} shrubs · ${treeCount - shrubCount} trees · ${livingPlants - treeCount} ferns`],
-                    [speciesRecords.size, "historical species"],
-                    [seeds.size + sporeBankTotal(), "propagules"],
-                    [maxGeneration, "maximum generation"],
-                    [biomass, "living biomass cells"],
-                    [`+${recentSpecies} / −${recentExtinctions}`, "recent species / extinctions"],
+                    [`World seed: ${escapeHtml(worldSeedText)}`, `weather from ${CLIMATE_FIRST_YEAR + climateStartIndex}${CLIMATE_FIRST_YEAR + climateStartIndex > CLIMATE_LAST_YEAR ? "*" : ""}`, "The text the terrain and the opening plants grow from, and the year of the weather record the world started in"],
+                    [`Plants: ${livingPlants}`, `${livingSpecies} species · ${shrubCount} shrubs · ${treeCount - shrubCount} trees · ${livingPlants - treeCount} ferns`, "Living plants now. A shrub is a tree that stays short"],
+                    [speciesRecords.size, "historical species", "Every species there has ever been in this world, living or extinct"],
+                    [seeds.size + sporeBankTotal(), "propagules", "Seeds and spores lying in the soil, waiting to sprout"],
+                    [maxGeneration, "maximum generation", "The most parent-to-seedling steps any living plant is from a founding plant"],
+                    [biomass, "living biomass cells", "Cells of living wood and leaf"],
+                    [`+${recentSpecies} / −${recentExtinctions}`, "recent species / extinctions", "Species that appeared and died out in the last sampling interval"],
                     ...insectCards(),
                 ];
                 statsSummary.innerHTML = cards
-                    .map(([value, label]) => `<div class="stat-card"><strong title="${value}">${value}</strong><span>${label}</span></div>`)
+                    .map(([value, label, tip]) => `<div class="stat-card"><strong title="${value}">${value}</strong><span${tip ? ` title="${tip}"` : ""}>${label}</span></div>`)
                     .join("");
             }
             function displayTimelineSamples() {
@@ -11214,10 +11482,7 @@
                 if (!introPanel.hidden) return; // the introduction handles its own keys
                 const views = { m: "moisture", l: "light", f: "fertility" };
                 const view = views[e.key.toLowerCase()];
-                if (view && !e.repeat) {
-                    heatmapMode = heatmapMode === view ? null : view; // the same key again goes back to the world
-                    updateHelpLine();
-                }
+                if (view && !e.repeat) setHeatmapMode(heatmapMode === view ? null : view); // the same key again goes back to the world
                 if (e.key === "Escape" && !exportPanel.hidden) closeExportPanel();
                 if (e.key.toLowerCase() === "z" && !e.repeat && exportPanel.hidden) setMagnifier(!magnifierOn);
 
@@ -11250,6 +11515,461 @@
                 event.preventDefault();
                 setPaused(!simulationPaused);
             });
+            // The View buttons in the top bar (and the M, L and F keys)
+            const viewButtons = [...document.querySelectorAll("[data-view]")];
+            function setHeatmapMode(mode) {
+                heatmapMode = mode || null;
+                for (const button of viewButtons) {
+                    const active = (button.dataset.view || null) === heatmapMode;
+                    button.classList.toggle("active", active);
+                    button.setAttribute("aria-pressed", String(active));
+                }
+                updateHelpLine();
+            }
+            for (const button of viewButtons) button.onclick = () => setHeatmapMode(button.dataset.view);
+
+            // Drop-down menus: World, File and the chart's Lines. Fixed to the window, under their button.
+            const dropdowns = [
+                [document.querySelector("#worldMenuButton"), document.querySelector("#worldMenu")],
+                [document.querySelector("#fileMenuButton"), document.querySelector("#fileMenu")],
+                [document.querySelector("#linesButton"), document.querySelector("#chartMenu")],
+            ];
+            function closeDropdowns(except = null) {
+                for (const [button, menu] of dropdowns) {
+                    if (menu === except) continue;
+                    menu.hidden = true;
+                    button.setAttribute("aria-expanded", "false");
+                }
+            }
+            function placeDropdown(button, menu) {
+                const box = button.getBoundingClientRect();
+                const width = menu.offsetWidth;
+                menu.style.top = `${box.bottom + 2}px`;
+                menu.style.left = `${Math.max(8, Math.min(box.right - width, innerWidth - width - 8))}px`;
+            }
+            for (const [button, menu] of dropdowns) {
+                button.onclick = () => {
+                    const opening = menu.hidden;
+                    closeDropdowns(menu);
+                    menu.hidden = !opening;
+                    button.setAttribute("aria-expanded", String(opening));
+                    if (opening) placeDropdown(button, menu);
+                };
+            }
+            document.addEventListener("pointerdown", (event) => {
+                if (!dropdowns.some(([button, menu]) => button.contains(event.target) || menu.contains(event.target))) closeDropdowns();
+            });
+            document.addEventListener("keydown", (event) => {
+                if (event.key === "Escape") closeDropdowns(); // also from inside a menu (the seed box, a checkbox)
+            });
+            addEventListener("resize", () => closeDropdowns());
+            addEventListener("scroll", () => closeDropdowns(), { passive: true });
+            document.querySelector("#generateTerrain").addEventListener("click", () => closeDropdowns());
+            document.querySelector("#fileMenu").addEventListener("click", (event) => {
+                if (event.target.closest("button")) closeDropdowns(); // each item does its thing and the menu goes
+            });
+
+            // The lines switched on in the chart, listed beside its title
+            const chartMenu = document.querySelector("#chartMenu"),
+                activeLines = document.querySelector("#activeLines");
+            function renderActiveLines() {
+                activeLines.replaceChildren(
+                    ...[...chartMenu.querySelectorAll("input:checked")].map((input) => {
+                        const item = document.createElement("span");
+                        const swatch = input.parentElement.querySelector(".swatch");
+                        if (swatch) item.append(swatch.cloneNode());
+                        item.append(input.parentElement.textContent.trim());
+                        return item;
+                    }),
+                );
+            }
+            chartMenu.addEventListener("change", renderActiveLines);
+            renderActiveLines();
+
+            // The Field guide tab: an index of every system on the left, one entry at a time on the right
+            const GUIDE = [
+                {
+                    n: "1",
+                    title: "Plants",
+                    entries: [
+                        {
+                            id: "1.1",
+                            title: "Genome and shape",
+                            paras: [
+                                "Every plant grows from its own genome. A tree's shape is not drawn: it is grown from a set of branching rules (an L-system) that are rewritten a few times over, then drawn branch by branch with the genome's branch angle, step length and trunk thickness.",
+                                "The same genome also sets leaf size, root depth and spread, shade tolerance, growth rate, how thriftily it uses water and nutrients, whether it flowers, and when it blossoms and turns in autumn.",
+                                "When a species is founded its genome is sketched once and given a name from what it looks like, such as Giant Birch or Pink Dog Rose. The name describes the look; it is not a real botanical identity.",
+                            ],
+                            world: "Hover over a plant to see what it is.",
+                            see: ["1.2", "2.1"],
+                        },
+                        {
+                            id: "1.2",
+                            title: "Light, water and roots",
+                            paras: [
+                                "Leaves need sunlight. Light is blocked by everything above, so a tall canopy shades the ground; a high shade tolerance lets a plant get by under it.",
+                                "A plant only drinks through the soil cells its roots reach. Deep roots reach water that lasts through a dry summer; wide shallow roots catch rain first.",
+                                "A plant short of light, water or nutrients becomes stressed, then dies. Its dead wood stands until it rots or blows down.",
+                            ],
+                            world: "Press L for the light view and M for the moisture view.",
+                            see: ["3.1", "7.1"],
+                        },
+                        {
+                            id: "1.3",
+                            title: "Flowers, seeds and pollen",
+                            paras: [
+                                "Plants that flower need pollen to set seed: each seed needs a pollinated flower. Bumblebees carry that pollen from flower to flower. Some plants, such as hazel, are wind-pollinated.",
+                                "Seeds fall from the parent and ride the wind. A seed or spore lying in the soil, waiting for the right conditions, is called a propagule.",
+                            ],
+                            see: ["5.3", "2.3"],
+                        },
+                        {
+                            id: "1.4",
+                            title: "Shrubs and ferns",
+                            paras: [
+                                "Shrubs are not a separate kind of plant: any tree genome that grows below a certain height counts as a shrub. Now and then a tree seedling sprouts stunted as a shrub; that is not inherited, and its seeds carry the parent tree's genome.",
+                                "Ferns shed spores into the soil instead of seeds. Each column of soil keeps a spore bank, and spores sprout only where the ground is damp enough.",
+                            ],
+                            see: ["1.1"],
+                        },
+                        {
+                            id: "1.5",
+                            title: "Through the year",
+                            paras: [
+                                "Trees blossom at a time set by their genome and drop their petals as coloured litter. Deciduous trees colour up in autumn and shed their leaves, some as litter and the rest withering away.",
+                                "Growth follows the temperature, so a cold year means a short growing season.",
+                            ],
+                            see: ["6.4", "3.3"],
+                        },
+                    ],
+                },
+                {
+                    n: "2",
+                    title: "Species and evolution",
+                    entries: [
+                        {
+                            id: "2.1",
+                            title: "What counts as a species",
+                            paras: [
+                                "Each species keeps a representative genome. A new plant joins the closest species whose genome is near enough to its own; if none is, it founds a new species.",
+                                "So a species is a cluster of similar genomes, and a new one appears when a line of offspring has drifted far enough.",
+                            ],
+                            see: ["2.2", "7.2"],
+                        },
+                        {
+                            id: "2.2",
+                            title: "Mutation and generations",
+                            paras: [
+                                "Seeds inherit their parent's genome with small random changes. The plants that suit the light, water and soil where they land make more seeds, so over many generations the population shifts.",
+                                "A plant's generation counts parent-to-seedling steps from the founding plants. Evolution needs many generations: run at 4× or 16× to see it.",
+                            ],
+                            see: ["2.1"],
+                        },
+                        {
+                            id: "2.3",
+                            title: "Crosses",
+                            paras: [
+                                "A flower usually sets seed from pollen of its own species, but bees do not always keep to one species. Seeds from a cross between species carry a mix of both genomes.",
+                                "In the Family tree, crosses are drawn as dotted links to the second parent.",
+                            ],
+                            see: ["5.3", "2.5"],
+                        },
+                        {
+                            id: "2.4",
+                            title: "Seed-only and extinct",
+                            paras: [
+                                "A species is not gone when its last plant dies. Its seeds or spores may lie in the soil for years and sprout when conditions turn. Such species are listed as surviving as seeds only.",
+                                "A species is extinct when no plants and no propagules are left.",
+                            ],
+                            see: ["1.3"],
+                        },
+                        {
+                            id: "2.5",
+                            title: "Reading the species views",
+                            paras: [
+                                "Plant species lists every species with its population, its propagules, its highest generation and when it emerged. Open a row for its details and genome.",
+                                "Family tree hangs every species under the one it came from. A thick line is still alive. Click a species to open it.",
+                            ],
+                        },
+                    ],
+                },
+                {
+                    n: "3",
+                    title: "Soil and water",
+                    entries: [
+                        {
+                            id: "3.1",
+                            title: "Rain and soil water",
+                            paras: [
+                                "Every grain of ground is simulated. Rain lands, soaks into the soil and seeps downwards; on a slope it runs downhill, and in a hollow it pools.",
+                                "Soil holds water for a while and slowly dries from the surface. The same rain can be plenty for a deep-rooted tree and a drought for a seedling.",
+                            ],
+                            world: "Press M for the moisture view: wetter soil shows brighter blue.",
+                            see: ["3.2", "1.2"],
+                        },
+                        {
+                            id: "3.2",
+                            title: "Gravel and aquifers",
+                            paras: [
+                                "Below the soil lies gravel and then rock. Gravel is easy for roots to push through but holds little water.",
+                                "Pockets of water-bearing gravel in the rock (aquifers) stay wet and refill slowly. Roots that reach one can last through a dry summer.",
+                            ],
+                            see: ["3.1"],
+                        },
+                        {
+                            id: "3.3",
+                            title: "Litter and fertility",
+                            paras: [
+                                "Fallen leaves, petals and wood lie on the ground as litter. As litter rots, it adds fertility to the soil beneath. Fungi rot it faster and earthworms drag it underground.",
+                                "Soil colour shows fertility: pale, washed-out soil is poor, mid brown is ordinary, and deep dark brown is rich.",
+                            ],
+                            world: "Press F for the fertility view.",
+                            see: ["4.1", "5.1"],
+                        },
+                    ],
+                },
+                {
+                    n: "4",
+                    title: "Fungi",
+                    entries: [
+                        {
+                            id: "4.1",
+                            title: "Mycelium",
+                            paras: [
+                                "Fungi live underground as mycelium: colonies of fine threads that spread through moist soil towards food.",
+                                "Colonies feed on litter lying above them and on dead roots, and rot both much faster than they would rot alone. A starved colony dies back and returns a little fertility. Mycelium binds the soil it runs through, as roots do.",
+                            ],
+                            world: "Faint pale threads in the soil; the magnifier (Z) shows them best.",
+                            see: ["4.2", "3.3"],
+                        },
+                        {
+                            id: "4.2",
+                            title: "Mushrooms",
+                            paras: [
+                                "A well-fed colony pushes up mushrooms through the leaf litter. Mushrooms release spores that start new colonies elsewhere, and a new colony's colour sometimes differs from its parent's.",
+                            ],
+                        },
+                        {
+                            id: "4.3",
+                            title: "Wood-rotting fungi",
+                            paras: [
+                                "A separate group of fungi lives on dead wood. Their spores find standing dead trees and fallen logs, spread through them, and rot the wood several times faster, so more of it crumbles into litter that feeds the soil.",
+                                "They show as bracket fungi on dead trunks.",
+                            ],
+                        },
+                    ],
+                },
+                {
+                    n: "5",
+                    title: "Insects",
+                    entries: [
+                        {
+                            id: "5.1",
+                            title: "Earthworms",
+                            paras: [
+                                "A hungry worm comes up to the surface, drags fallen litter down its burrow, and leaves casts of rich soil along the way. The surface is where the food is and also where the danger is: it dries out and freezes first, and blackbirds hunt there.",
+                                "Each worm carries four genes: the depth it likes to live at, its pace, its size, and its hardiness against drought and frost. Mates swap genes, so the population drifts towards whatever the recent weather has rewarded.",
+                                "Below about 6 °C worms stop feeding and live off what they stored in autumn.",
+                            ],
+                            see: ["3.3"],
+                        },
+                        {
+                            id: "5.2",
+                            title: "Ants",
+                            paras: [
+                                "Red wood ants heap a dome of thatch (litter carried in from the woodland floor) in a sunny spot near trees, and live on honeydew from aphids in the trees. Black garden ants dig tunnels under open ground and live on seeds and honeydew.",
+                                "Scouts wander out alone. When one finds food it heads home laying a scent trail, and foragers follow the strongest scent. Trails fade unless they are walked again.",
+                                "The colony is what inherits. In midsummer a well-fed colony sends out queens, and each founds a new colony nearby with a slightly mutated copy of its traits: how many scouts, how strong the trail, how long it lasts, how far workers range, and how cold is too cold to forage.",
+                            ],
+                        },
+                        {
+                            id: "5.3",
+                            title: "Bumblebees",
+                            paras: [
+                                "Mated queens sleep through winter in the soil. In spring each wakes once the air is warm enough for her, founds a nest in an old burrow and forages alone until her first workers hatch.",
+                                "Workers fly flower to flower for nectar, carrying the last flower's pollen to the next. In late summer a well-fed colony raises new queens and then dies out; only the queens survive the winter.",
+                                "Each colony inherits the temperature it flies at, the petal colour it prefers, how choosy it is about that colour, its constancy (how strongly a bee keeps to the species it visited last) and its range. Because bees carry the pollen, they decide which plants cross with which.",
+                            ],
+                            see: ["1.3", "2.3"],
+                        },
+                    ],
+                },
+                {
+                    n: "6",
+                    title: "Weather and seasons",
+                    entries: [
+                        {
+                            id: "6.1",
+                            title: "The weather record",
+                            paras: [
+                                "Each simulated year replays one real year of English weather: the Met Office Central England Temperature and England and Wales Precipitation records, 1766 to 2025. Real year-to-year swings are small, so they are exaggerated.",
+                                "A cold year means a shorter growing season and a longer, snowier winter. A dry year means shorter rains and longer dry spells. After 2025, and for Present day, the years are generated rather than real.",
+                            ],
+                            see: ["7.4", "7.5"],
+                        },
+                        {
+                            id: "6.2",
+                            title: "Snow",
+                            paras: [
+                                "When it is cold enough, precipitation falls as snow and settles where it lands: on the ground and on branches. Lying snow mostly melts slowly into the soil instead of running off.",
+                                "The snow line on the distant hills creeps down through late autumn and winter, a few weeks behind the temperature.",
+                            ],
+                        },
+                        {
+                            id: "6.3",
+                            title: "Wind",
+                            paras: [
+                                "Wind moves real pixels: rain and snow slant, seeds and spores ride it, and litter blows along and piles against obstacles.",
+                                "Storms bend the trees, and can blow over a tree whose roots cannot hold its crown.",
+                            ],
+                            see: ["1.2"],
+                        },
+                        {
+                            id: "6.4",
+                            title: "Day, night and seasons",
+                            paras: [
+                                "The sun rises and sets and its path changes through the year; day length is not affected by the weather record.",
+                                "The readout at the top of the panel gives the season and year, the temperature and the rainfall.",
+                            ],
+                        },
+                    ],
+                },
+                {
+                    n: "7",
+                    title: "Using the simulation",
+                    entries: [
+                        {
+                            id: "7.1",
+                            title: "Views",
+                            paras: [
+                                "The View buttons at the top of the panel switch the world to moisture, light or fertility, and back. The keys M, L and F do the same; press the same key again to go back to the normal view.",
+                            ],
+                        },
+                        {
+                            id: "7.2",
+                            title: "Inspecting and following",
+                            paras: [
+                                "Hover over anything to see what it is. Click a plant to follow its species.",
+                            ],
+                        },
+                        {
+                            id: "7.3",
+                            title: "Magnifier and moving around",
+                            paras: [
+                                "Z toggles a magnifying lens; scroll to zoom it. The valley is wider than the view: scroll along it, and use the mouse wheel to zoom.",
+                            ],
+                        },
+                        {
+                            id: "7.4",
+                            title: "Seeds, years and places",
+                            paras: [
+                                "The seed decides the terrain and the opening plants. The same text always grows the same world, so a word or a message can be shared as a world.",
+                                "The World menu holds the seed, the year of the weather record to start in, and Places: curated starting worlds with a seed, a year and how the valley is planted. You can also add @year to the end of the seed.",
+                            ],
+                            see: ["6.1"],
+                        },
+                        {
+                            id: "7.5",
+                            title: "Sandbox",
+                            paras: [
+                                "Left alone, the world follows the weather record. The Sandbox lets you override it with a storm, cold snap, heatwave, drought or downpour, and draw soil, water, snow, stone or seeds onto the world.",
+                            ],
+                        },
+                        {
+                            id: "7.6",
+                            title: "Saving and exporting",
+                            paras: [
+                                "The world saves itself in this browser every couple of minutes. In the File menu, Save writes it to a file you can load later, CSV and JSON export the species data, and Picture frames and saves an image.",
+                            ],
+                        },
+                    ],
+                },
+            ];
+            const guideEntries = GUIDE.flatMap((chapter) => chapter.entries.map((entry) => ({ ...entry, chapter })));
+            const guideById = new Map(guideEntries.map((entry) => [entry.id, entry]));
+            const guideToc = document.querySelector("#guideToc"),
+                guideArticle = document.querySelector("#guideArticle"),
+                guideSearch = document.querySelector("#guideSearch");
+            let guideCurrent = guideEntries[0].id;
+            function guideButton(text, onclick, className = "") {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.textContent = text;
+                button.onclick = onclick;
+                if (className) button.className = className;
+                return button;
+            }
+            function renderGuideToc() {
+                const query = guideSearch.value.trim().toLowerCase();
+                const matches = (entry) =>
+                    !query || `${entry.title} ${entry.chapter.title} ${entry.paras.join(" ")}`.toLowerCase().includes(query);
+                const items = [];
+                for (const chapter of GUIDE) {
+                    const entries = chapter.entries.filter((entry) => matches({ ...entry, chapter }));
+                    if (!entries.length) continue;
+                    items.push(guideButton(`${chapter.n}  ${chapter.title}`, () => showGuideEntry(entries[0].id), "guide-chapter"));
+                    for (const entry of entries) {
+                        const button = guideButton(`${entry.id}  ${entry.title}`, () => showGuideEntry(entry.id));
+                        button.setAttribute("aria-current", String(entry.id === guideCurrent));
+                        items.push(button);
+                    }
+                }
+                if (!items.length) {
+                    const empty = document.createElement("div");
+                    empty.className = "guide-empty";
+                    empty.textContent = "Nothing matches.";
+                    items.push(empty);
+                }
+                guideToc.replaceChildren(...items);
+            }
+            function showGuideEntry(id) {
+                const entry = guideById.get(id);
+                if (!entry) return;
+                guideCurrent = id;
+                const crumb = document.createElement("div");
+                crumb.className = "guide-crumb";
+                crumb.textContent = `Field guide › ${entry.chapter.n} ${entry.chapter.title}`;
+                const title = document.createElement("h3");
+                title.textContent = `${entry.id}  ${entry.title}`;
+                const parts = [crumb, title];
+                for (const text of entry.paras) {
+                    const para = document.createElement("p");
+                    para.textContent = text;
+                    parts.push(para);
+                }
+                if (entry.world) {
+                    const world = document.createElement("div");
+                    world.className = "guide-world";
+                    const label = document.createElement("b");
+                    label.textContent = "In the world: ";
+                    world.append(label, entry.world);
+                    parts.push(world);
+                }
+                if (entry.see?.length) {
+                    const see = document.createElement("div");
+                    see.className = "guide-see";
+                    see.append("See also");
+                    for (const other of entry.see) see.append(guideButton(`${other} ${guideById.get(other).title}`, () => showGuideEntry(other)));
+                    parts.push(see);
+                }
+                const index = guideEntries.indexOf(entry);
+                const previous = guideEntries[index - 1],
+                    next = guideEntries[index + 1];
+                const pager = document.createElement("div");
+                pager.className = "guide-pager";
+                const back = guideButton(previous ? `‹ ${previous.id} ${previous.title}` : "", () => showGuideEntry(previous.id));
+                const forward = guideButton(next ? `${next.id} ${next.title} ›` : "", () => showGuideEntry(next.id));
+                back.disabled = !previous;
+                forward.disabled = !next;
+                pager.append(back, forward);
+                parts.push(pager);
+                guideArticle.replaceChildren(...parts);
+                guideArticle.scrollTop = 0;
+                renderGuideToc();
+            }
+            guideSearch.addEventListener("input", renderGuideToc);
+            showGuideEntry(guideCurrent);
+
             // The introduction: a few pages shown on a first visit, and again from the ? button.
             // The world holds still while it's open.
             const INTRO_SEEN_KEY = "evolvingPlants.introSeen";
